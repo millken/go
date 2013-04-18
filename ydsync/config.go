@@ -6,16 +6,20 @@ import (
 	"github.com/howeyc/fsnotify"
 	"github.com/qiniu/log"
 	"os"
+	"path/filepath"
 	"time"
 )
 
 type AppConfig struct {
-	StatHat struct {
-		ApiKey string
-	}
-	Flags struct {
-		HasStatHat bool
-	}
+	Default struct {
+        Debug bool
+        NumCores int
+        NumThreads int
+    }
+	
+    Groups map[string]*struct {
+        Path string
+    }
 }
 
 var Config = new(AppConfig)
@@ -26,7 +30,7 @@ func configWatcher(fileName string) {
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		fmt.Println(err)
+		log.Printf("Failed to watch  %s\n", err)
 		return
 	}
 
@@ -38,10 +42,12 @@ func configWatcher(fileName string) {
 	for {
 		select {
 		case ev := <-watcher.Event:
-			if ev.Name == fileName {
-				if ev.IsCreate() || ev.IsModify() || ev.IsRename() {
+			//log.Debugf("config file change ,event: %s", ev)
+			if filepath.Clean(ev.Name) == fileName {
+				if ev.IsModify() { //only modify event
 					time.Sleep(200 * time.Millisecond)
 					configReader(fileName)
+					log.Debugf("reload config file: %s", fileName)
 				}
 			}
 		case err := <-watcher.Error:
@@ -77,13 +83,13 @@ func configReader(fileName string) error {
 		return err
 	}
 
-	cfg.Flags.HasStatHat = len(cfg.StatHat.ApiKey) > 0
-
-	// log.Println("STATHAT APIKEY:", cfg.StatHat.ApiKey)
+	log.Printf("%d\n", len(cfg.Groups))
+	log.Println("DEBUG :", cfg.Default.Debug)
 	// log.Println("STATHAT FLAG  :", cfg.Flags.HasStatHat)
 
 	Config = cfg
 
+	go runMonitor()
 	return nil
 }
 

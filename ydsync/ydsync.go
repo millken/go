@@ -3,7 +3,6 @@ import (
 	"expvar"
 	"flag"
 	"github.com/qiniu/log"
-	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -67,7 +66,7 @@ func main() {
 		return
 	}
 
-	log.Printf("Starting mkdns %s\n", VERSION)
+	//log.Printf("Starting  %s\n", VERSION)
 
 	if *cpuprofile != "" {
 		prof, err := os.Create(*cpuprofile)
@@ -88,33 +87,11 @@ func main() {
 
 	go configWatcher(configFileName)
 
-	if *flaginter == "*" {
-		addrs, _ := net.InterfaceAddrs()
-		ips := make([]string, 0)
-		for _, addr := range addrs {
-			ip, _, err := net.ParseCIDR(addr.String())
-			if err != nil {
-				continue
-			}
-			if !(ip.IsLoopback() || ip.IsGlobalUnicast()) {
-				continue
-			}
-			ips = append(ips, ip.String())
-		}
-		*flaginter = strings.Join(ips, ",")
-	}
-
-	inter := getInterfaces()
-
-	for _, host := range inter {
-		go listenAndServe(host)
-	}
-
 	terminate := make(chan os.Signal)
 	signal.Notify(terminate, os.Interrupt)
 
 	<-terminate
-	log.Printf("geodns: signal received, stopping")
+	log.Printf(" signal received, stopping")
 
 	if *memprofile != "" {
 		f, err := os.Create(*memprofile)
