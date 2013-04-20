@@ -17,8 +17,9 @@ type AppConfig struct {
         NumThreads int
     }
 	
-    Groups map[string]*struct {
+    Rsync map[string]*struct {
         Path string
+        Host []string
     }
 }
 
@@ -83,8 +84,8 @@ func configReader(fileName string) error {
 		return err
 	}
 
-	log.Printf("%d\n", len(cfg.Groups))
-	log.Println("DEBUG :", cfg.Default.Debug)
+	//log.Printf("%d\n", len(cfg.Rsync))
+	//log.Println("DEBUG :", cfg.Default.Debug)
 	// log.Println("STATHAT FLAG  :", cfg.Flags.HasStatHat)
 
 	Config = cfg

@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"path/filepath"
+	"os/exec"
 )
 const (
 	// How many requests/responses can be in the queue before blocking.
@@ -27,7 +28,7 @@ type Rsync struct {
 }
 var paths = make([]*Paths, 0)
 var watchDir, err = fsnotify.NewWatcher()
-var group = make(map[string]string, len(Config.Groups)) //create a string array with length
+var group = make(map[string]string, len(Config.Rsync)) //create a string array with length
 var dirmonitor = make(chan *DirMonitor, QUEUE_LENGTH)
 var rsync = make(chan *Rsync, QUEUE_LENGTH)
 
@@ -39,7 +40,7 @@ func runMonitor() {
 		go start_worker(dirmonitor)
 		go start_rsync(rsync)
 	}	
-	for k,v := range Config.Groups {
+	for k,v := range Config.Rsync {
 		group[v.Path] = k
 		_, err := fsnotify.NewWatcher()
 		if err != nil {
@@ -73,8 +74,8 @@ func Inotify() {
 					log.Warnf("watch error: %s", err)
 				}
 				if path.IsDir() {
-					getSubDirs(ev.Name)
 					rsync <- &Rsync{"createdir", ev.Name}
+					getSubDirs(ev.Name)
 				}
 			}else if ev.IsModify() {
 				path, err := os.Lstat(ev.Name)
@@ -139,6 +140,95 @@ func start_worker(queue <-chan *DirMonitor) {
 
 func start_rsync(queue <-chan *Rsync) {
 	for r := range queue {
-		log.Debugf("rsync file: %s=>%s", r.act, r.file)
+		switch r.act{
+			case "deletedir": go rsync_deletedir(r.file)
+			case "deletefile": go rsync_deletefile(r.file)
+			case "createdir" :  go rsync_createdir(r.file)
+			default :
+		}		
+		log.Debugf("event: %s=>%s", r.act, r.file)
 	}
+}
+
+//cd /root/test && rsync -artuz --contimeout=3  -R --delete ./   --include="a/" --include="a/f/" --include="a/f/g/" --include="a/f/g/a.txt" --exclude=*  192.168.3.104::test
+func rsync_deletedir(file string) {
+	var name = ""
+	for k,v := range group {
+		if filepath.HasPrefix(file, k) {
+			name = v
+
+		}
+	}
+
+	rname := file[len(Config.Rsync[name].Path):]//=substring
+	command := "cd " + Config.Rsync[name].Path + " && rsync -artuz --contimeout=3 -R  --delete ./"
+	temp := ""
+	for _,f := range strings.Split(strings.TrimLeft(rname, "/"), "/") {
+		temp = temp + f + "/"
+		command += " --include=\"" + temp + "\""
+
+	}
+	command += " --include=\"" + temp + "***\"" + " --exclude=* "
+	cmd := ""
+	for _,host := range Config.Rsync[name].Host {
+		cmd = command + host + "::" + name
+		log.Debugf("rsync deletedir=> %s", cmd)
+	}
+	
+}
+
+func rsync_deletefile(file string) {
+	var name = ""
+	for k,v := range group {
+		if filepath.HasPrefix(file, k) {
+			name = v
+
+		}
+	}
+
+	rname := file[len(Config.Rsync[name].Path):]//=substring
+	command := "cd " + Config.Rsync[name].Path + " && rsync -artuz --contimeout=3 -R  --delete ./"
+	temp := ""
+	rname1 := strings.TrimLeft(rname, "/")
+	if strings.LastIndex(rname1, "/") > -1 {
+		rname2 := rname1[:strings.LastIndex(rname1, "/")]
+		for _,f := range strings.Split(rname2, "/") {
+			temp = temp + f + "/"
+			command += " --include=\"" + temp + "\""
+
+		}
+	}
+	cmd := ""
+	for _,host := range Config.Rsync[name].Host {
+		cmd = command + " --include=\"" + rname1 + "\" " + host + "::" + name
+		_, err := exec.Command(cmd).Output()
+		if err != nil {
+			log.Fatal(err)
+		}		
+		log.Debugf("rsync deletefile=> %s", cmd)
+	}	
+}
+
+func rsync_createdir(file string) {
+	var name = ""
+	for k,v := range group {
+		if filepath.HasPrefix(file, k) {
+			name = v
+
+		}
+	}
+
+	rname := file[len(Config.Rsync[name].Path):]//=substring
+	command := "cd " + Config.Rsync[name].Path + " && rsync -artuz --contimeout=3 -R "
+
+	rname1 := strings.TrimLeft(rname, "/")
+	cmd := ""
+	for _,host := range Config.Rsync[name].Host {
+		cmd = command + " --include=\"./" + rname1 + "\" " + host + "::" + name
+		_, err := exec.Command(cmd).Output()
+		if err != nil {
+			log.Fatal(err)
+		}		
+		log.Debugf("rsync createdir=> %s", cmd)
+	}		
 }
