@@ -68,14 +68,33 @@ func Inotify() {
 	for {
 		select {
 		case ev := <-watchDir.Event:
-			if ev.IsCreate() {
+			filiter := 0
+			if ev.IsModify() || ev.IsCreate() {
 				path, err := os.Lstat(ev.Name)
 				if err != nil {
-					log.Warnf("watch error: %s", err)
+					log.Warnf("os Lstat error: %s", err)
+					filiter = 1
 				}
+
+				if path.IsDir() != true {
+					fname := path.Name()
+					if strings.HasPrefix(fname, ".") || strings.HasSuffix(fname, "~") || fname == "4913" {
+						filiter = 1
+					}
+				} 	
+			}
+			if filiter != 0 {
+				log.Warnf("filiter path : %s", ev.Name)
+			}else if ev.IsCreate() {
+				path, err := os.Lstat(ev.Name)
+				if err != nil {
+					log.Warnf("os Lstat error: %s", err)
+				}				
 				if path.IsDir() {
 					rsync <- &Rsync{"createdir", ev.Name}
 					getSubDirs(ev.Name)
+				}else{
+					rsync <- &Rsync{"createfile", ev.Name}			
 				}
 			}else if ev.IsModify() {
 				path, err := os.Lstat(ev.Name)
@@ -85,11 +104,11 @@ func Inotify() {
 				if path.IsDir() != true {
 					fname := path.Name()
 					if strings.HasPrefix(fname, ".") || strings.HasSuffix(fname, "~") || fname == "4913" {
-						log.Debugf("filter : %s", ev.Name)
+						//log.Debugf("filter : %s", ev.Name)
 					}else{
 						rsync <- &Rsync{"modifyfile", ev.Name}
 					}
-					log.Infof("file changed: %s", path.Name())
+					//log.Infof("file changed: %s", path.Name())
 				}
 			}else if ev.IsDelete() {
 				if ev.IsDir() {
@@ -97,7 +116,22 @@ func Inotify() {
 				}else{
 					rsync <- &Rsync{"deletefile", ev.Name}
 				} 
-			}
+			}else if  ev.IsRename() {
+				if path, statErr := os.Stat(ev.Name); os.IsNotExist(statErr) {
+					if ev.IsDir() {
+						rsync <- &Rsync{"deletedir", ev.Name}
+					}else{
+						rsync <- &Rsync{"deletefile", ev.Name}
+					}
+				}else {
+				if path.IsDir() {
+					rsync <- &Rsync{"createdir", ev.Name}
+					getSubDirs(ev.Name)
+				}else{
+					rsync <- &Rsync{"createfile", ev.Name}			
+				}
+				}
+			} 
 			log.Debugf("serve  event: %s", ev)
 		case err := <-watchDir.Error:
 			log.Println("fsnotify error:", err)
@@ -109,7 +143,7 @@ func WalkFunc(path string, info os.FileInfo, err error)error {
 		for k,v := range group {
 			if filepath.HasPrefix(path, k) {
 				dirmonitor <- &DirMonitor{v, path}				
-				log.Debugf("prefix %s: %s", path, v)
+				//log.Debugf("prefix %s: %s", path, v)
 			}
 		}
 		
@@ -133,7 +167,7 @@ func getSubDirs(dirName string)error {
 func start_worker(queue <-chan *DirMonitor) {
 	for dirmonitor := range queue {
 		watchDir.Watch(dirmonitor.Dir)
-		log.Debugf("add watch: %s => %s\n", dirmonitor.Name, dirmonitor.Dir)
+		//log.Debugf("add watch: %s => %s\n", dirmonitor.Name, dirmonitor.Dir)
 		
 	}
 }
@@ -144,9 +178,11 @@ func start_rsync(queue <-chan *Rsync) {
 			case "deletedir": go rsync_deletedir(r.file)
 			case "deletefile": go rsync_deletefile(r.file)
 			case "createdir" :  go rsync_createdir(r.file)
+			case "modifyfile": go rsync_modifyfile(r.file)
+			case "createfile": go rsync_modifyfile(r.file)
 			default :
 		}		
-		log.Debugf("event: %s=>%s", r.act, r.file)
+		//log.Debugf("event: %s=>%s", r.act, r.file)
 	}
 }
 
@@ -172,6 +208,10 @@ func rsync_deletedir(file string) {
 	cmd := ""
 	for _,host := range Config.Rsync[name].Host {
 		cmd = command + host + "::" + name
+		_, err := exec.Command("bash", "-c", cmd).Output()
+		if err != nil {
+			log.Fatal(err)
+		}			
 		log.Debugf("rsync deletedir=> %s", cmd)
 	}
 	
@@ -201,12 +241,12 @@ func rsync_deletefile(file string) {
 	cmd := ""
 	for _,host := range Config.Rsync[name].Host {
 		cmd = command + " --include=\"" + rname1 + "\" " + host + "::" + name
-		_, err := exec.Command(cmd).Output()
+		_, err := exec.Command("bash", "-c", cmd).Output()
 		if err != nil {
 			log.Fatal(err)
 		}		
 		log.Debugf("rsync deletefile=> %s", cmd)
-	}	
+	}
 }
 
 func rsync_createdir(file string) {
@@ -219,16 +259,40 @@ func rsync_createdir(file string) {
 	}
 
 	rname := file[len(Config.Rsync[name].Path):]//=substring
-	command := "cd " + Config.Rsync[name].Path + " && rsync -artuz --contimeout=3 -R "
+	command := "cd " + Config.Rsync[name].Path + " && rsync -artuz --contimeout=3 -R ./ "
 
 	rname1 := strings.TrimLeft(rname, "/")
 	cmd := ""
 	for _,host := range Config.Rsync[name].Host {
 		cmd = command + " --include=\"./" + rname1 + "\" " + host + "::" + name
-		_, err := exec.Command(cmd).Output()
+		_, err := exec.Command("bash", "-c", cmd).Output()
 		if err != nil {
 			log.Fatal(err)
 		}		
 		log.Debugf("rsync createdir=> %s", cmd)
+	}		
+}
+
+func rsync_modifyfile(file string) {
+	var name = ""
+	for k,v := range group {
+		if filepath.HasPrefix(file, k) {
+			name = v
+
+		}
+	}
+
+	rname := file[len(Config.Rsync[name].Path):]//=substring
+	command := "cd " + Config.Rsync[name].Path + " && rsync -artuz --contimeout=3 -R  ./ "
+
+	rname1 := strings.TrimLeft(rname, "/")
+	cmd := ""
+	for _,host := range Config.Rsync[name].Host {
+		cmd = command + " --include=\"./" + rname1 + "\" " + host + "::" + name
+		_, err := exec.Command("bash", "-c", cmd).Output()
+		if err != nil {
+			log.Fatal(err)
+		}		
+		log.Debugf("rsync modifyfile=> %s", cmd)
 	}		
 }
