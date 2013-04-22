@@ -49,16 +49,11 @@ func runMonitor() {
 		}
 		log.Infof("config groups : %s, %s", k, v.Path)
 		paths = make([]*Paths, 0)
-		err = getSubDirs(v.Path)
+		err = addSubDirs(v.Path)
 		if err != nil {
 			log.Errorf("subdir error : %s", err)
 			return 
 		}
-		/*
-		for _,p := range paths {
-			dirmonitor <- &DirMonitor{k, p.path}
-		}
-		*/
 	}
 	go Inotify()	
 	
@@ -67,72 +62,36 @@ func runMonitor() {
 func Inotify() {
 	for {
 		select {
-		case ev := <-watchDir.Event:
-			filiter := 0
-			if ev.IsModify() || ev.IsCreate() {
-				path, err := os.Lstat(ev.Name)
-				if err != nil {
-					log.Warnf("os Lstat error: %s", err)
-					filiter = 1
+		case event := <-watchDir.Event:
+			//http://code.google.com/p/sersync/source/browse/Inotify.cpp
+			fname := filepath.Base(event.Name)
+				
+			if strings.HasPrefix(fname, ".") || strings.HasSuffix(fname, "~") || fname == "4913" {
+				log.Debugf("ignored path: %s", event.Name)
+			}else		
+			if (event.Mask() & fsnotify.IN_MOVED_FROM) == fsnotify.IN_MOVED_FROM || (event.Mask() & fsnotify.IN_DELETE) == fsnotify.IN_DELETE {
+				if event.IsDir() {
+					rsync <- &Rsync{"deletedir", event.Name}
+				}else{
+					rsync <- &Rsync{"deletefile", event.Name}
+				}
+			}else
+			if event.IsCreate() {			
+				if event.IsDir() {
+					addSubDirs(event.Name)
+					rsync <- &Rsync{"createdir", event.Name}
+				}else{
+					rsync <- &Rsync{"createfile", event.Name}			
+				}
+			}else
+			if  event.IsModify() {		
+				if event.IsDir() != true {
+					rsync <- &Rsync{"modifyfile", event.Name}
 				}
 
-				if path.IsDir() != true {
-					fname := path.Name()
-					if strings.HasPrefix(fname, ".") || strings.HasSuffix(fname, "~") || fname == "4913" {
-						filiter = 1
-					}
-				} 	
-			}
-			if filiter != 0 {
-				log.Warnf("filiter path : %s", ev.Name)
-			}else if ev.IsCreate() {
-				path, err := os.Lstat(ev.Name)
-				if err != nil {
-					log.Warnf("os Lstat error: %s", err)
-				}				
-				if path.IsDir() {
-					rsync <- &Rsync{"createdir", ev.Name}
-					getSubDirs(ev.Name)
-				}else{
-					rsync <- &Rsync{"createfile", ev.Name}			
-				}
-			}else if ev.IsModify() {
-				path, err := os.Lstat(ev.Name)
-				if err != nil {
-					log.Warnf("os Lstat error: %s", err)
-				}				
-				if path.IsDir() != true {
-					fname := path.Name()
-					if strings.HasPrefix(fname, ".") || strings.HasSuffix(fname, "~") || fname == "4913" {
-						//log.Debugf("filter : %s", ev.Name)
-					}else{
-						rsync <- &Rsync{"modifyfile", ev.Name}
-					}
-					//log.Infof("file changed: %s", path.Name())
-				}
-			}else if ev.IsDelete() {
-				if ev.IsDir() {
-					rsync <- &Rsync{"deletedir", ev.Name}
-				}else{
-					rsync <- &Rsync{"deletefile", ev.Name}
-				} 
-			}else if  ev.IsRename() {
-				if path, statErr := os.Stat(ev.Name); os.IsNotExist(statErr) {
-					if ev.IsDir() {
-						rsync <- &Rsync{"deletedir", ev.Name}
-					}else{
-						rsync <- &Rsync{"deletefile", ev.Name}
-					}
-				}else {
-				if path.IsDir() {
-					rsync <- &Rsync{"createdir", ev.Name}
-					getSubDirs(ev.Name)
-				}else{
-					rsync <- &Rsync{"createfile", ev.Name}			
-				}
-				}
-			} 
-			log.Debugf("serve  event: %s", ev)
+            }
+
+			log.Debugf("serve  event: %s, mask = %d", event, event.Mask())
 		case err := <-watchDir.Error:
 			log.Println("fsnotify error:", err)
 		}
@@ -153,7 +112,7 @@ func WalkFunc(path string, info os.FileInfo, err error)error {
 	return nil
 }
 
-func getSubDirs(dirName string)error {
+func addSubDirs(dirName string)error {
 	_, err := os.Stat(dirName)
 	if err != nil {
 		return err
@@ -167,7 +126,7 @@ func getSubDirs(dirName string)error {
 func start_worker(queue <-chan *DirMonitor) {
 	for dirmonitor := range queue {
 		watchDir.Watch(dirmonitor.Dir)
-		//log.Debugf("add watch: %s => %s\n", dirmonitor.Name, dirmonitor.Dir)
+		log.Debugf("add watch: %s => %s\n", dirmonitor.Name, dirmonitor.Dir)
 		
 	}
 }
@@ -188,6 +147,8 @@ func start_rsync(queue <-chan *Rsync) {
 
 //cd /root/test && rsync -artuz --contimeout=3  -R --delete ./   --include="a/" --include="a/f/" --include="a/f/g/" --include="a/f/g/a.txt" --exclude=*  192.168.3.104::test
 func rsync_deletedir(file string) {
+	log.Debugf("remove watch: %s\n", file)
+	watchDir.RemoveWatch(file)
 	var name = ""
 	for k,v := range group {
 		if filepath.HasPrefix(file, k) {
