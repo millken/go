@@ -9,6 +9,10 @@ import (
 	"runtime"
 	"sync"
 	"sort"
+	"os"
+	"io"
+	"net"
+	"time"
 )
 
 type ProxyStatus struct {
@@ -31,9 +35,11 @@ var getsInProgress = make(chan int, 2) // Max. number of simultaneous requests
 
 func (status ProxyStatus) String() string {
 	var output string
-	if (status.ok) { output += "OK" } else { output += "ERROR" } 
+	if (status.ok) {
+		output += "OK" 
+	} else { output += "ERROR" } 
 	output += " " + status.proxy
-	output += " " + status.downloadedUrl
+	//output += " " + status.downloadedUrl
 	if (!status.ok) { output += " " + status.errorMessage }
 	return output
 }
@@ -43,7 +49,11 @@ func checkProxy(proxy string, downloadedUrl string) (success bool, errorMessage 
 	defer func() { <- getsInProgress }()
 	fmt.Println("Checking:", proxy, downloadedUrl)
 	proxyUrl, err := url.Parse("http://" + proxy)
-	httpClient := &http.Client { Transport: &http.Transport { Proxy: http.ProxyURL(proxyUrl) } }
+	_, err = net.DialTimeout("tcp", proxy,  5 * time.Second)
+	if err != nil {
+		return false, err.Error()
+	}
+	httpClient := &http.Client {Transport: &http.Transport { Proxy: http.ProxyURL(proxyUrl) } }
 	response, err := httpClient.Get(downloadedUrl)
 	if err != nil { return false, err.Error() }
 
@@ -83,7 +93,7 @@ func checkResults(proxyInfoChan chan ProxyStatus) {
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	content, err := ioutil.ReadFile("proxy.txt")
+	content, err := ioutil.ReadFile("xici.txt")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -139,10 +149,17 @@ func main() {
 	sort.Sort(ByAddress{proxyStatuses})
 	
 	fmt.Println("==================================================")
-	
+	f, err := os.OpenFile("checkedproxy.txt", os.O_APPEND, 0666) 
+
+
+
 	for i := 0; i < len(proxyStatuses); i++ {
 		status := proxyStatuses[i]
-		if !status.ok { continue }
+		if !status.ok { continue }else{
+			io.WriteString(f, status.proxy) 
+
+		}
 		fmt.Println(status)
 	}
+	f.Close()
 }
