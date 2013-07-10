@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
+	"time"
 )
 
+const TimeFormat = "2006-01-02 15:04:05.000000000"
 var db *sql.DB
 
 func InitDatabase(path string) *sql.DB {
@@ -33,11 +35,11 @@ func AddUrl(url string, match string, replace string) {
     //插入数据
     stmt, err := db.Prepare("INSERT INTO book_url(url, match, replace, created) values(?,?,?,?)")
 	if err != nil {
-		log.Fatal("Cannot prepare insert: ", err.Error())
+		log.Fatalf("Cannot prepare insert: ", err.Error())
 	}
-
-    _, err = stmt.Exec(url, match, replace, "2012-12-09 12:33:11")
+	
+    _, err = stmt.Exec(url, match, replace, time.Now().Format(TimeFormat[:19]))
 	if err != nil {
-		log.Fatal("Cannot insert : ", err.Error())
+		log.Fatalf("Cannot insert : ", err.Error())
 	}
 }
