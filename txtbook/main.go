@@ -5,7 +5,8 @@ import (
 	//"os"
 	//"test"
 	//"config"
-	"Book"
+	//"Book"
+	"web"
 )
 
 
@@ -13,10 +14,11 @@ func main() {
 
 	//w, _ := os.OpenFile("debug", os.O_CREATE|os.O_APPEND, 0644)
 	//log.SetOutput(w)
-	log.SetOutputLevel(log.Ldebug)
+	//log.SetOutputLevel(log.Ldebug)
 
-	log.Debugf("Debug: foo\n")
+	log.Debugf("Server starting...\n")
 	//log.Debug(config.GetRedisConfig().Addr)
 	//test.Testlog()
-	Book.AddUrl("http://aaa.com/sdf","sd","sd")
+	//Book.AddUrl("http://aaa.com/sdf","sd","sd")
+	web.Run()
 }
