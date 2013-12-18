@@ -21,9 +21,5 @@ func main() {
 	`)
 	b,_ := Otto.Get("url")
 	fmt.Printf("url=%q",b)
-	Otto.Run(`
-		function rgc_(gvfb_){var bedb_,bueb_=new Array(),rkl_="o\x04\x89\x03`\nH\xe5\xe7\x83\xd4\x8c\xe1N\xdbO\xee,E\x1eG\x0bc\xfd\x0eN\xcaO\x10@\xd4\x85\xe5D\xe7B8\x1eB)l\xf9Ic\xf5";
-	`)
-	b,_ := Otto.Get("rkl_")
-	fmt.Printf("url=%q",b)
+
 }

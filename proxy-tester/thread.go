@@ -31,7 +31,7 @@ func main() {
 	for i := 0; i < 128; i++ {
 		go start_worker(global_wip)
 	}
-	content, err := ioutil.ReadFile("xici.txt")
+	content, err := ioutil.ReadFile("xici2.list")
 	if err != nil {
 		panic(err.Error())
 	}

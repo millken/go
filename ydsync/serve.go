@@ -169,11 +169,12 @@ func rsync_deletedir(file string) {
 	cmd := ""
 	for _,host := range Config.Rsync[name].Host {
 		cmd = command + host + "::" + name
+		log.Debugf("rsync deletedir=> %s", cmd)
 		_, err := exec.Command("bash", "-c", cmd).Output()
 		if err != nil {
-			log.Fatal(err)
+			log.Warnf("command run error : %s", err)
 		}			
-		log.Debugf("rsync deletedir=> %s", cmd)
+		
 	}
 	
 }
@@ -188,7 +189,7 @@ func rsync_deletefile(file string) {
 	}
 
 	rname := file[len(Config.Rsync[name].Path):]//=substring
-	command := "cd " + Config.Rsync[name].Path + " && rsync -artuz --contimeout=3 -R  --delete ./"
+	command := "cd " + Config.Rsync[name].Path + " && rsync -artuz --contimeout=3 "
 	temp := ""
 	rname1 := strings.TrimLeft(rname, "/")
 	if strings.LastIndex(rname1, "/") > -1 {
@@ -202,11 +203,12 @@ func rsync_deletefile(file string) {
 	cmd := ""
 	for _,host := range Config.Rsync[name].Host {
 		cmd = command + " --include=\"" + rname1 + "\" " + host + "::" + name
+		log.Debugf("rsync deletefile=> %s", cmd)
 		_, err := exec.Command("bash", "-c", cmd).Output()
 		if err != nil {
-			log.Fatal(err)
+			log.Warnf("command run error : %s", err)
 		}		
-		log.Debugf("rsync deletefile=> %s", cmd)
+		
 	}
 }
 
@@ -226,11 +228,11 @@ func rsync_createdir(file string) {
 	cmd := ""
 	for _,host := range Config.Rsync[name].Host {
 		cmd = command + " --include=\"./" + rname1 + "\" " + host + "::" + name
+		log.Debugf("rsync createdir=> %s", cmd)
 		_, err := exec.Command("bash", "-c", cmd).Output()
 		if err != nil {
-			log.Fatal(err)
+			log.Warnf("command run error : %s", err)
 		}		
-		log.Debugf("rsync createdir=> %s", cmd)
 	}		
 }
 
@@ -244,16 +246,16 @@ func rsync_modifyfile(file string) {
 	}
 
 	rname := file[len(Config.Rsync[name].Path):]//=substring
-	command := "cd " + Config.Rsync[name].Path + " && rsync -artuz --contimeout=3 -R  ./ "
+	command := "cd " + Config.Rsync[name].Path + " && rsync -artuz --contimeout=3 -R ./ "
 
 	rname1 := strings.TrimLeft(rname, "/")
 	cmd := ""
 	for _,host := range Config.Rsync[name].Host {
 		cmd = command + " --include=\"./" + rname1 + "\" " + host + "::" + name
+		log.Debugf("rsync modifyfile=> %s", cmd)
 		_, err := exec.Command("bash", "-c", cmd).Output()
 		if err != nil {
-			log.Fatal(err)
+			log.Warnf("command run error : %s", err)
 		}		
-		log.Debugf("rsync modifyfile=> %s", cmd)
 	}		
 }
