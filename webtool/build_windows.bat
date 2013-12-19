@@ -1,2 +1,3 @@
 set GOPATH=%~dp0;
-go build
+go build logger 
+go install webtool
