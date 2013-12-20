@@ -27,4 +27,5 @@ func init() {
 
 func main() {
 	go sigHandler()
+        log.Println("start server")
 }
