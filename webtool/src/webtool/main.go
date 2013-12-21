@@ -4,17 +4,21 @@ import (
 	"os"
 	"os/signal"
 	"logger"
+	"mvc"
 )
 
 var VERSION string = "1.0"
 var gitVersion string
-
+var (
+        App = mvc.NewApp()
+)
 func sigHandler() {
         terminate := make(chan os.Signal)
         signal.Notify(terminate, os.Interrupt)
 
         <-terminate
         log.Printf("signal received, stopping")
+		os.Exit(0)
 }
 
 func init() {
@@ -27,5 +31,7 @@ func init() {
 
 func main() {
 	go sigHandler()
-        log.Println("start server")
+    log.Println("start server")
+	App.AddPreAction(&MainController{}, "Hello")
+	App.Run()
 }
