@@ -2,33 +2,66 @@ package mvc
 
 import (
     "net/http"
+	"mime"
+	//"bytes"
+	"encoding/json"
+	"strings"
+	"strconv"
 )
 type Controller struct {
-    w http.ResponseWriter
-    r *http.Request
+    Response http.ResponseWriter
+    Request *http.Request
 }
 
 type ControllerInterface interface {
-    SetW(w http.ResponseWriter)
-    SetR(r *http.Request)
-    GetW() http.ResponseWriter
-    GetR() *http.Request
+    SetResponse(w http.ResponseWriter)
+    SetRequest(r *http.Request)
 }
 
-
-func (c *Controller) SetW(w http.ResponseWriter){
-    c.w = w
+func (c *Controller) ContentType(ext string) {
+	if !strings.HasPrefix(ext, ".") {
+		ext = "." + ext
+	}
+	ctype := mime.TypeByExtension(ext)
+	if ctype != "" {
+		c.Response.Header().Set("Content-Type", ctype)
+	} else {
+		c.Response.Header().Set("Content-Type", ext)
+	}
 }
 
-func (c *Controller) SetR(r *http.Request){
-    c.r = r
+func (c *Controller) SetHeader(hdr string, val string) {
+	c.Response.Header().Set(hdr, val)
 }
 
-
-func (c *Controller) GetW() http.ResponseWriter{
-    return c.w
+func (c *Controller) AddHeader(hdr string, val string) {
+	c.Response.Header().Add(hdr, val)
 }
 
-func (c *Controller) GetR() *http.Request{
-    return c.r
+func (c *Controller) Redirect(url string, code int) {
+	c.Response.Header().Set("Location", url)
+	c.Response.WriteHeader(code)
+}
+
+func (c *Controller) Render(contentType string, data []byte) {
+	c.SetHeader("Content-Length", strconv.Itoa(len(data)))
+	c.ContentType(contentType)
+	c.Response.Write(data)
+}
+
+func (c *Controller) RenderHtml(content string) {
+	c.Render("html", []byte(content))
+}
+
+func (c *Controller) RenderText(content string) {
+	c.Render("txt", []byte(content))
+}
+
+func (c *Controller) RenderJson(data interface{}) {
+	content, err := json.Marshal(data)
+	if err != nil {
+		http.Error(c.Response, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	c.Render("json", content)
 }

@@ -16,6 +16,7 @@ type cAction struct {
 
 type App struct {
 	actions map[string][]*cAction
+	View   *View
 }
 
 /*
@@ -25,6 +26,7 @@ func init() {
 func NewApp() *App {
 	this := new(App)
 	this.actions =  make(map[string][]*cAction)
+	this.View = NewView()
 	return this
 }
 
@@ -61,8 +63,8 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
 			}
 	}()
 	for _,pre := range this.actions["pre"] {
-			pre.controller.SetW(w)
-			pre.controller.SetR(r)
+			pre.controller.SetResponse(w)
+			pre.controller.SetRequest(r)
 			log.Printf("%q,%v", pre.controller, pre.action)
 
 			controller := reflect.ValueOf(pre.controller)

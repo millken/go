@@ -32,6 +32,6 @@ func init() {
 func main() {
 	go sigHandler()
     log.Println("start server")
-	App.AddPreAction(&MainController{}, "Hello")
+	App.AddPreAction(&MainController{}, "Hi")
 	App.Run()
 }

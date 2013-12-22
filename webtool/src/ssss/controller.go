@@ -45,8 +45,17 @@ func (c *Controller) Finish() {
 
 }
 
+func (c *Controller) SetHeader(hdr string, val string) {
+	c.Response.Header().Set(hdr, val)
+}
+
+func (c *Controller) AddHeader(hdr string, val string) {
+	c.Response.Header().Add(hdr, val)
+}
+
 func (c *Controller) Redirect(url string, code int) {
-	c.Ctx.Redirect(code, url)
+	c.Response.Header().Set("Location", url)
+	c.Response.WriteHeader(code)
 }
 
 func (c *Controller) Render(contentType string, data []byte) {
