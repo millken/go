@@ -26,8 +26,6 @@ func (c *Controller) SetResponse(w http.ResponseWriter) {
 	c.Response = w
 }
 
-
-
 func (c *Controller) ContentType(ext string) {
 	if !strings.HasPrefix(ext, ".") {
 		ext = "." + ext

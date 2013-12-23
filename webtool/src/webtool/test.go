@@ -15,11 +15,10 @@ func (this *MainController) Hello() {
 }
 
 func (this *MainController) Hello2() {
-	this.RenderText("hello world 2")
+	log.Debugf("Host:%s, Path:%s, RawQuery: %s", this.Request.Host, this.Request.URL.Path, this.Request.URL.RawQuery)
+	this.RenderHtml("<html><body>hello, " + this.Request.URL.Query().Get("user")+ "</body></html>")
 }
 
 func (this *MainController) Hi() {
-	//this.RenderHtml("<html><body>Hi</body></html>")
 	log.Debugf("Host:%s, Path:%s, RawQuery: %s", this.Request.Host, this.Request.URL.Path, this.Request.URL.RawQuery)
-	log.Println("<html><body>Hi</body></html>")
 }

@@ -72,9 +72,6 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
 		method := controller.MethodByName(pre.action)
 
 		if method.Kind() != reflect.Invalid {
-		//log.Println("Method:%s", method.Name)
-//f := m.Func
-//f.Call([]reflect.Value{reflect.ValueOf(c)})
 				method.Call([]reflect.Value{})
 		} else {
 				http.Error(w, "Controller has no action named " + pre.action, 404)
@@ -84,19 +81,17 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
     for _, route := range append(this.Router.routes[host], this.Router.routes["*"]...) {
         if route.Match(r.URL.Path) {
 	        params := r.URL.Query()
-	        log.Println(r.URL.Path)
 	        for key, values := range route.extractParams(r.URL.Path) {
-	        		log.Printf("%s=%s",key, values)
 	                params[key] = append(params[key], values...)
 	        }
 	        r.URL.RawQuery = params.Encode()
-log.Printf("%s", r.URL.RawQuery)
+
             route.controller.SetResponse(w)
             route.controller.SetRequest(r)
 			controller := reflect.ValueOf(route.controller)
 			method := controller.MethodByName(route.action)
 			method.Call([]reflect.Value{})            
-            //return
+            return
         }
     }	
 }
