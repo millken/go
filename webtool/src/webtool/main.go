@@ -33,5 +33,7 @@ func main() {
 	go sigHandler()
     log.Println("start server")
 	App.AddPreAction(&MainController{}, "Hi")
-	App.Run()
+    App.Router.AddRoute("127.0.0.1", "/hello/:user", &MainController{}, "Hello2")
+    App.Router.AddRoute("*", "/hello", &MainController{}, "Hello")
+ 	App.Run()
 }

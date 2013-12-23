@@ -18,6 +18,16 @@ type ControllerInterface interface {
     SetRequest(r *http.Request)
 }
 
+func (c *Controller) SetRequest(r *http.Request) {
+	c.Request = r
+}
+
+func (c *Controller) SetResponse(w http.ResponseWriter) {
+	c.Response = w
+}
+
+
+
 func (c *Controller) ContentType(ext string) {
 	if !strings.HasPrefix(ext, ".") {
 		ext = "." + ext
