@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"strings"
 	"net/http"
+	"path/filepath"
+	"mime"
 	"logger"
 )
 
@@ -38,6 +40,9 @@ func (this *App)AddPreAction(c ControllerInterface, a string) {
 }
 
 func (this *App)Run() {
+	//init mime
+
+	initMime()	
 	http.HandleFunc("/favicon.ico", handlerFavicon)
 
 	http.HandleFunc("/", this.Handler)
@@ -64,6 +69,24 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
 	}()
+	host := strings.Split(r.Host, ":")[0]
+    for _, staticDir := range append(this.Router.staticDirs[host], this.Router.staticDirs["*"]...) {
+		//static file server
+		log.Printf("r.URL.Path:%s, dir:%s", r.URL.Path, staticDir.url)
+		if strings.HasPrefix(r.URL.Path, staticDir.url) {
+			var file string
+			if staticDir.url == "/" {
+				file = staticDir.path + r.URL.Path
+			} else {
+				file = staticDir.path + r.URL.Path[len(staticDir.url):]
+			}
+			//http://segmentfault.com/q/1010000000150166
+			ctype := mime.TypeByExtension(filepath.Ext(r.URL.Path))
+			w.Header().Set("Content-Type", ctype)
+			http.ServeFile(w, r, file)
+			return
+		}
+	}
 	for _,pre := range this.actions["pre"] {
 		pre.controller.SetResponse(w)
 		pre.controller.SetRequest(r)
@@ -77,7 +100,6 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Controller has no action named " + pre.action, 404)
 		}
 	}
-	host := strings.Split(r.Host, ":")[0]
     for _, route := range append(this.Router.routes[host], this.Router.routes["*"]...) {
         if route.Match(r.URL.Path) {
 	        params := r.URL.Query()

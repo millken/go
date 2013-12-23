@@ -15,9 +15,13 @@ type Route struct {
 	controller ControllerInterface
 	action string    
 }
-
+type StaticDir struct {
+	url string
+	path string
+}
 type Router struct {
     routes map[string][]*Route
+	staticDirs       map[string][]*StaticDir
 }
 
 var (
@@ -33,12 +37,19 @@ func NewRoute(pattern string, controller ControllerInterface, action string) *Ro
 func NewRouter() *Router {
 	this := new(Router)
 	this.routes = make(map[string][]*Route)
+	this.staticDirs = make(map[string][]*StaticDir)
 	return this
 }
 
 func (this *Router) AddRoute(host string, pattern string, controller ControllerInterface, action string) *Router {
 	if host == "" { host = "*" }
 	this.routes[host] = append(this.routes[host], NewRoute(pattern, controller, action))
+	return this
+}
+
+/* add static dir*/
+func (this *Router)AddStaticPath(host string, url string, path string) *Router {
+	this.staticDirs[host] = append(this.staticDirs[host], &StaticDir{url, path})
 	return this
 }
 
