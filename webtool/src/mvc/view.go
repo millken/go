@@ -37,26 +37,31 @@ func (this *View) LoadTemplates(root string, pattern string) {
                 log.Errorf("view: pattern matches no files: %#q", pattern)
         }
         for i := range filenames {
-        	
-        	name := strings.TrimLeft(strings.TrimPrefix(filenames[i], filepath.Clean(root)), "/")
+        	replace := strings.NewReplacer("\\", "/")
+        	name := strings.TrimLeft(replace.Replace(strings.TrimPrefix(filenames[i], filepath.Clean(root))), "/")
         	log.Debugf("filenames:%s, name: %s", filenames[i], name)
-            t := template.New(name)
-            this.templates[name], _ = t.ParseFiles(filenames[i])
+            this.Add(name, filenames[i])
         }
         //return this.ParseFiles(root, filenames...)	
 }
 
-func (this *View) Add(name, path string) *View {
+func (this *View) Add(name string, path string) *View {
 	view := template.New(name)
-	template.Must(view.ParseFiles(path))
-	this.templates[name] = view
+	/*
+	tmpl, err := view.ParseFiles(path)
+	if err != nil {
+		log.Errorf("Add error: %s", err)
+	}
+	*/
+	
+	this.templates[name] = template.Must(view.ParseFiles(path))
 
 	return this
 }
 
 func (this *View) Render(w http.ResponseWriter, name string, data interface{}) {
 	view := this.templates[name]
-	log.Debugf("name: %s", name)
+	log.Debugf("name: %s,%d", name, len(this.templates))
 	err := view.Execute(w, data)
 	if err != nil {
 		http.Error(w, err.Error(), 404)
