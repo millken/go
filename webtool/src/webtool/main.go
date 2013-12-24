@@ -35,6 +35,7 @@ func main() {
 	App.AddPreAction(&MainController{}, "Hi")
     App.Router.AddRoute("127.0.0.1", "/hello/:user", &MainController{}, "Hello2")
     App.Router.AddRoute("*", "/hello", &MainController{}, "Hello")
-	App.Router.AddStaticPath("*", "/static/", "static/")
+	App.Router.AddStaticPath("*", "/static/", "/home/www/")
+    App.View.LoadTemplates("../template/default/", "*/*.html")
  	App.Run()
 }

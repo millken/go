@@ -5,8 +5,6 @@ import (
 	"runtime"
 	"strings"
 	"net/http"
-	"path/filepath"
-	"mime"
 	"logger"
 )
 
@@ -80,9 +78,6 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				file = staticDir.path + r.URL.Path[len(staticDir.url):]
 			}
-			//http://segmentfault.com/q/1010000000150166
-			ctype := mime.TypeByExtension(filepath.Ext(r.URL.Path))
-			w.Header().Set("Content-Type", ctype)
 			http.ServeFile(w, r, file)
 			return
 		}
@@ -90,7 +85,7 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
 	for _,pre := range this.actions["pre"] {
 		pre.controller.SetResponse(w)
 		pre.controller.SetRequest(r)
-
+		pre.controller.SetView(this.View)
 		controller := reflect.ValueOf(pre.controller)
 		method := controller.MethodByName(pre.action)
 
@@ -110,6 +105,8 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
 
             route.controller.SetResponse(w)
             route.controller.SetRequest(r)
+            route.controller.SetView(this.View)
+            
 			controller := reflect.ValueOf(route.controller)
 			method := controller.MethodByName(route.action)
 			method.Call([]reflect.Value{})            

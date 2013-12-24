@@ -10,8 +10,8 @@ type MainController struct {
 }
 
 func (this *MainController) Hello() {
-	this.RenderText("hello world")
-	log.Println("hello world")
+	//this.RenderText("hello world")
+	this.View.Render(this.Response, "test/index.html", nil)
 }
 
 func (this *MainController) Hello2() {
