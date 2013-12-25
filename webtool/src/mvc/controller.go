@@ -7,17 +7,16 @@ import (
 	"encoding/json"
 	"strings"
 	"strconv"
+	"banjo"
 )
 type Controller struct {
     Response http.ResponseWriter
     Request *http.Request
-    View   *View
 }
 
 type ControllerInterface interface {
     SetResponse(w http.ResponseWriter)
     SetRequest(r *http.Request)
-    SetView(v *View)
 }
 
 func (c *Controller) SetRequest(r *http.Request) {
@@ -26,10 +25,6 @@ func (c *Controller) SetRequest(r *http.Request) {
 
 func (c *Controller) SetResponse(w http.ResponseWriter) {
 	c.Response = w
-}
-
-func (c *Controller) SetView(v *View) {
-	c.View = v
 }
 
 func (c *Controller) ContentType(ext string) {
@@ -61,6 +56,12 @@ func (c *Controller) Render(contentType string, data []byte) {
 	c.SetHeader("Content-Length", strconv.Itoa(len(data)))
 	c.ContentType(contentType)
 	c.Response.Write(data)
+}
+
+func (c *Controller) Display(name string) {
+    context := banjo.NewContext()
+    context.Set("Name", "Banjo")
+    context.Render(c.Response, name)
 }
 
 func (c *Controller) RenderHtml(content string) {

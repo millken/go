@@ -6,6 +6,7 @@ import (
 	"strings"
 	"net/http"
 	"logger"
+	"banjo"
 )
 
 /*前置action*/
@@ -16,7 +17,6 @@ type cAction struct {
 
 type App struct {
 	actions map[string][]*cAction
-	View   *View
 	Router *Router
 }
 
@@ -27,7 +27,6 @@ func init() {
 func NewApp() *App {
 	this := new(App)
 	this.actions =  make(map[string][]*cAction)
-	this.View = NewView()
 	this.Router = NewRouter()
 	return this
 }
@@ -35,6 +34,13 @@ func NewApp() *App {
 func (this *App)AddPreAction(c ControllerInterface, a string) {
 	preaction := &cAction{c, a}
 	this.actions["pre"] = append(this.actions["pre"], preaction)
+}
+
+func (this *App)AddTemplates(dir string) {
+	err := banjo.ParseTree(dir)
+	if err != nil {
+			log.Println(err)
+	}
 }
 
 func (this *App)Run() {
@@ -85,7 +91,6 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
 	for _,pre := range this.actions["pre"] {
 		pre.controller.SetResponse(w)
 		pre.controller.SetRequest(r)
-		pre.controller.SetView(this.View)
 		controller := reflect.ValueOf(pre.controller)
 		method := controller.MethodByName(pre.action)
 
@@ -105,7 +110,6 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
 
             route.controller.SetResponse(w)
             route.controller.SetRequest(r)
-            route.controller.SetView(this.View)
             
 			controller := reflect.ValueOf(route.controller)
 			method := controller.MethodByName(route.action)

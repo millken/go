@@ -11,7 +11,7 @@ type MainController struct {
 
 func (this *MainController) Hello() {
 	//this.RenderText("hello world")
-	this.View.Render(this.Response, "test/index.html", nil)
+	this.Display("test/index.html")
 }
 
 func (this *MainController) Hello2() {
