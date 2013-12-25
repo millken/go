@@ -36,7 +36,7 @@ func main() {
 	App.ServeFile("/sitemap.xml", "../static/sitemap.xml")
 	App.AddPreAction(&MainController{}, "Hi")
     App.Router.AddRoute("127.0.0.1", "/hello/:user", &MainController{}, "Hello2")
-    App.Router.AddRoute("*", "/hello", &MainController{}, "Hello")
+    App.Router.AddRoute("*", "/whois/:domain", &WhoisController{}, "Domain")
 	App.Router.AddStaticPath("*", "/static/", "../static/")
     App.AddTemplates("../template/default/")
  	App.Run()
