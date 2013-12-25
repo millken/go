@@ -26,7 +26,7 @@ import (
 )
 
 var DefaultTemplate = template.New("banjo")
-
+var Replaceslash = strings.NewReplacer("\\", "/")
 func Funcs(funcs template.FuncMap) {
         DefaultTemplate.Funcs(funcs)
 }
@@ -58,6 +58,7 @@ func ParseGlob(pattern string) error {
 // like ParseFiles and ParseGlob template names are paths relative to the root.
 func ParseTree(root string) error {
         return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+				path = strings.TrimLeft(Replaceslash.Replace(filepath.Clean(path)), "/")
                 switch {
                 case err != nil:
                         return err
@@ -71,7 +72,7 @@ func ParseTree(root string) error {
                         return err
                 }
                 name := path[len(root):]
-                fmt.Printf("name:%s,body:%s", name, string(_raw))
+                //fmt.Printf("name:%s,body:%s", name, string(_raw))
                 return Parse(name, string(_raw))
         })
 }

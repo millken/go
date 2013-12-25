@@ -543,7 +543,9 @@ var mimemaps map[string]string = map[string]string{
 	".oex":         "application/x-opera-extension",
 	".mustache":    "text/html",
 }
-
+func init() {
+	go initMime()
+}
 func initMime() {
 	for k, v := range mimemaps {
 		mime.AddExtensionType(k, v)

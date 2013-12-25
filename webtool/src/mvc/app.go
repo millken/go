@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"logger"
 	"banjo"
+	"fmt"
 )
 
 /*前置action*/
@@ -18,6 +19,12 @@ type cAction struct {
 type App struct {
 	actions map[string][]*cAction
 	Router *Router
+	Config *Config
+}
+
+type Config struct {
+	HttpAddr	string
+	HttpPort	int
 }
 
 /*
@@ -28,6 +35,7 @@ func NewApp() *App {
 	this := new(App)
 	this.actions =  make(map[string][]*cAction)
 	this.Router = NewRouter()
+	this.Config = &Config{"127.0.0.1", 81}
 	return this
 }
 
@@ -43,17 +51,26 @@ func (this *App)AddTemplates(dir string) {
 	}
 }
 
+func (this *App)ServeListen(addr string, port int) {
+	this.Config.HttpAddr = addr
+	this.Config.HttpPort = port
+}
+
+func (this *App)ServeFile(pattern string, filename string) {
+    http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+        http.ServeFile(w, r, filename)
+    })
+}
+
+func (this *App)ServeDir(pattern string, dir string) {
+	http.Handle(pattern, http.FileServer(http.Dir(dir)))
+}
+
 func (this *App)Run() {
-	//init mime
-
-	initMime()	
-	http.HandleFunc("/favicon.ico", handlerFavicon)
-
+	addr := fmt.Sprintf("%s:%d", this.Config.HttpAddr, this.Config.HttpPort)
+	log.Println("Http Server Started on " + addr)
 	http.HandleFunc("/", this.Handler)
-	root := "127.0.0.1:81"
-
-	log.Println("Http Server Started on " + root)
-	err := http.ListenAndServe(root, nil)
+	err := http.ListenAndServe(addr, nil)
 	if err != nil {
 			log.Println(err)
 	}
@@ -76,7 +93,7 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
 	host := strings.Split(r.Host, ":")[0]
     for _, staticDir := range append(this.Router.staticDirs[host], this.Router.staticDirs["*"]...) {
 		//static file server
-		log.Printf("r.URL.Path:%s, dir:%s", r.URL.Path, staticDir.url)
+		//log.Printf("r.URL.Path:%s, dir:%s", r.URL.Path, staticDir.url)
 		if strings.HasPrefix(r.URL.Path, staticDir.url) {
 			var file string
 			if staticDir.url == "/" {
@@ -117,9 +134,4 @@ func (this *App) Handler(w http.ResponseWriter, r *http.Request) {
             return
         }
     }	
-}
-
-
-func handlerFavicon(w http.ResponseWriter, req *http.Request) {
-
 }

@@ -10,7 +10,7 @@ import (
 var VERSION string = "1.0"
 var gitVersion string
 var (
-        App = mvc.NewApp()
+    App = mvc.NewApp()
 )
 func sigHandler() {
         terminate := make(chan os.Signal)
@@ -27,15 +27,17 @@ func init() {
         }
 
         log.SetOutputLevel(log.Ldebug)
+		go sigHandler()
 }
 
 func main() {
-	go sigHandler()
-    log.Println("start server")
+	App.ServeListen("0.0.0.0", 80)
+	App.ServeFile("/favicon.ico", "../static/favicon.ico")
+	App.ServeFile("/sitemap.xml", "../static/sitemap.xml")
 	App.AddPreAction(&MainController{}, "Hi")
     App.Router.AddRoute("127.0.0.1", "/hello/:user", &MainController{}, "Hello2")
     App.Router.AddRoute("*", "/hello", &MainController{}, "Hello")
-	App.Router.AddStaticPath("*", "/static/", "/home/www/")
+	App.Router.AddStaticPath("*", "/static/", "../static/")
     App.AddTemplates("../template/default/")
  	App.Run()
 }
