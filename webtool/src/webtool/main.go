@@ -31,7 +31,7 @@ func init() {
 }
 
 func main() {
-	App.ServeListen("0.0.0.0", 80)
+	App.ServeListen("0.0.0.0", 82)
 	App.ServeFile("/favicon.ico", "../static/favicon.ico")
 	App.ServeFile("/sitemap.xml", "../static/sitemap.xml")
 	App.AddPreAction(&MainController{}, "Hi")
