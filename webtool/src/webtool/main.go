@@ -34,7 +34,9 @@ func main() {
 	App.ServeListen("0.0.0.0", 82)
 	App.ServeFile("/favicon.ico", "../static/favicon.ico")
 	App.ServeFile("/sitemap.xml", "../static/sitemap.xml")
-	App.AddPreAction(&MainController{}, "Hi")
+	//App.AddPreAction(&MainController{}, "Hi")
+	App.Router.AddRoute("*", "/", &HomeController{}, "Index")
+
     App.Router.AddRoute("127.0.0.1", "/hello/:user", &MainController{}, "Hello2")
     App.Router.AddRoute("*", "/whois/:domain", &WhoisController{}, "Domain")
 	App.Router.AddStaticPath("*", "/static/", "../static/")
