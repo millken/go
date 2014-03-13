@@ -3,10 +3,9 @@ package main
 import (
 	"github.com/qiniu/log"
 	//"os"
-	"test"
 	"config"
+	"test"
 )
-
 
 func main() {
 

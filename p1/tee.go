@@ -1,11 +1,12 @@
 package main
+
 //https://raw.github.com/earino/coreutils_in_go/develop/tee.go
 import (
+	"flag"
 	"io"
+	"log"
 	"os"
 	"os/signal"
-	"flag"
-	"log"
 )
 
 var appendPtr = flag.Bool("a", false, "Append the output to the files rather than overwriting them.")
@@ -15,7 +16,7 @@ func maid() {
 	flag.Parse()
 
 	var writers = []io.Writer{os.Stdout}
-	var fileFlags int = os.O_WRONLY|os.O_CREATE
+	var fileFlags int = os.O_WRONLY | os.O_CREATE
 
 	if *appendPtr {
 		fileFlags |= os.O_APPEND
@@ -34,7 +35,7 @@ func maid() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		
+
 		writers = append(writers, w)
 	}
 
