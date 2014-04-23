@@ -1,13 +1,10 @@
-/*
-
-*/
-
 package main
 
 import (
+	"fmt"
+	"sync"
 	"./godns"
 	"flag"
-	"fmt"
 	"net"
 	"os"
 	"strconv"
@@ -24,9 +21,6 @@ var (
 	outputFlag   = flag.String("output", "", "output file")
 )
 
-var messageData = make([]byte, 0) // data read from file specified with dataFile flag
-
-// Before running main, parse flags and load message data, if applicable
 func init() {
 	flag.Parse()
 	// Increase file descriptor limit
@@ -36,15 +30,6 @@ func init() {
 	}
 }
 
-type Work struct {
-	ip string
-}
-
-type resultStruct struct {
-	addr string   // address of remote host
-	data []string // data returned from the host, if successful
-	err  error    // error, if any
-}
 
 //http://play.golang.org/p/TZbIBev4pU
 
@@ -69,20 +54,9 @@ func i32ToIP(a uint32) net.IP {
 	return net.IPv4(byte(a>>24), byte(a>>16), byte(a>>8), byte(a))
 }
 
-func worker(id int, queue chan *Work, resultChan chan resultStruct) {
-	for {
-		wp := <-queue
-		if wp == nil {
-			break
-		}
-		//fmt.Printf("worker #%d: item %v\n", id, *wp)
-		handleWork(wp, resultChan)
-	}
-}
-func handleWork(w *Work, resultChan chan resultStruct) {
-	//fmt.Printf("handleWork  %v\n", w)
+func querydns(ip string) {
 	options := &godns.LookupOptions{
-		DNSServers: []string{w.ip},
+		DNSServers: []string{ip},
 		Net:        "udp",
 		CacheTTL:   godns.DNS_NOCACHE,
 		OnlyIPv4:   true,
@@ -90,16 +64,31 @@ func handleWork(w *Work, resultChan chan resultStruct) {
 	}
 	addrs, err := godns.LookupHost(*domainFlag, options)
 	if err != nil {
-		resultChan <- resultStruct{w.ip, nil, err}
+		//resultChan <- resultStruct{w.ip, nil, err}
 	} else {
 		ret := []string{}
 		for _, ip := range addrs {
 			ret = append(ret, ip)
 		}
-		resultChan <- resultStruct{w.ip, ret, nil}
+		if *outputFlag != "" {
+			if err := WriteFile(*outputFlag, 0600, fmt.Sprintf("%s\n", ip));err != nil {
+				fmt.Printf("write file error : %s", err)
+			}
+		}		
+		fmt.Printf("[%s] ->%s : %v\n", ip, *domainFlag, ret)
 	}
 }
 
+func worker(linkChan chan string, wg *sync.WaitGroup) {
+	// Decreasing internal counter for wait-group as soon as goroutine finishes
+	defer wg.Done()
+
+	for ip := range linkChan {
+		querydns(ip)
+		//fmt.Printf("Done processing ip #%s\n", ip)
+	}
+
+}
 func WriteFile(fname string, perm uint32, str string) error {
 
 	var file *os.File
@@ -116,41 +105,17 @@ func WriteFile(fname string, perm uint32, str string) error {
 	file.Close()
 	return err
 }
-
-func output(resultChan chan resultStruct, doneChan chan int) {
-
-	ok, error := 0, 0
-	for result := range resultChan {
-		if result.err == nil {
-			fmt.Printf("%s: %v\n", result.addr, result.data)
-			if *outputFlag != "" {
-				if err := WriteFile(*outputFlag, 0600, fmt.Sprintf("%s\n", result.addr));err != nil {
-					fmt.Printf("write file error : %s", err)
-				}
-			}
-			ok++
-		} else {
-			//fmt.Fprintf(os.Stderr, "%s: Error %s\n", result.addr, result.err)
-			error++
-		}
-	}
-	fmt.Fprintf(os.Stderr, "Complete %d (success=%d, failure=%d)\n", ok + error, ok, error)
-	doneChan <- 1
-}
-
-
 func main() {
-	workChan := make(chan *Work, *nConnectFlag)
-	resultChan := make(chan resultStruct, *nConnectFlag) // grabbers send results to output
-	doneChan := make(chan int, *nConnectFlag)            // let grabbers signal completion	
-	
 
+	lCh := make(chan string)
+	wg := new(sync.WaitGroup)
+    
+	// Adding routines to workgroup and running then
 	for i := 0; i < *nConnectFlag; i++ {
-		go worker(i, workChan, resultChan)
+		wg.Add(1)
+		go worker(lCh, wg)
 	}
-	
-	go output(resultChan, doneChan)
-	
+
 	if *ipFlag != "" {
 		if strings.Index(*ipFlag, "/") != -1 {
 			if _, _, err := net.ParseCIDR(*ipFlag); err == nil {
@@ -161,7 +126,7 @@ func main() {
 				ip_end := addr32 | ^(0xFFFFFFFF << (32 - mask32))
 				fmt.Printf("ip_start :%d(%s) -> ip_end %d(%s)\n", ip_start, i32ToIP(ip_start).String(), ip_end, i32ToIP(ip_end).String())
 				for ipint32 := ip_start; ipint32 <= ip_end; ipint32++ {
-					workChan <- &Work{ i32ToIP(ipint32).String() }
+					lCh <- i32ToIP(ipint32).String()
 				}
 			} else {
 				fmt.Fprintf(os.Stderr, "%s: Error %s\n", *ipFlag, err)
@@ -182,7 +147,6 @@ func main() {
 		iplist := strings.Split(string(data), "\n")
 		for _,ip := range iplist {
 			ip = strings.Trim(ip, "\r\n ")
-			fmt.Printf("%s", ip)
 			if strings.Index(ip, "/") != -1 {
 				if _, _, err := net.ParseCIDR(ip); err == nil {
 					cidr := strings.Split(ip, "/")
@@ -191,19 +155,20 @@ func main() {
 					ip_start := addr32 & (0xFFFFFFFF << (32 - mask32))
 					ip_end := addr32 | ^(0xFFFFFFFF << (32 - mask32))
 					for ipint32 := ip_start; ipint32 <= ip_end; ipint32++ {
-						workChan <- &Work{ i32ToIP(ipint32).String() }
+						lCh <- i32ToIP(ipint32).String()
 					}
 				}
 			} else {
-				workChan <- &Work{ ip }
+				lCh <- ip
 			}
 		}
 	}
 	
-	for n := 0; n < *nConnectFlag; n++ {
-        workChan <- nil
-    }
 
-	close(resultChan)
+	// Closing channel (waiting in goroutines won't continue any more)
+	close(lCh)
 
+	// Waiting for all goroutines to finish (otherwise they die as main routine dies)
+	wg.Wait()
 }
+
