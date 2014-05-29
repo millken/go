@@ -79,4 +79,3 @@ func doWork() {
 func stopWork() {
 	log.Info("I'm Stopping!")
 }
-

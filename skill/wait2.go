@@ -44,4 +44,3 @@ func main() {
 	// Waiting for all goroutines to finish (otherwise they die as main routine dies)
 	wg.Wait()
 }
-

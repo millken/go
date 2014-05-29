@@ -1,6 +1,6 @@
 //https://gist.github.com/parkghost/5397740
 package main
- 
+
 import (
 	"fmt"
 	"log"
@@ -13,15 +13,15 @@ import (
 	"syscall"
 	"time"
 )
- 
+
 var heapProfileCounter int32
 var startTime = time.Now()
 var pid int
- 
+
 func init() {
 	pid = os.Getpid()
 }
- 
+
 func StartCPUProfile() {
 	f, err := os.Create("cpu-" + strconv.Itoa(pid) + ".pprof")
 	if err != nil {
@@ -29,15 +29,15 @@ func StartCPUProfile() {
 	}
 	pprof.StartCPUProfile(f)
 }
- 
+
 func StopCPUProfile() {
 	pprof.StopCPUProfile()
 }
- 
+
 func StartBlockProfile(rate int) {
 	runtime.SetBlockProfileRate(rate)
 }
- 
+
 func StopBlockProfile() {
 	filename := "block-" + strconv.Itoa(pid) + ".pprof"
 	f, err := os.Create(filename)
@@ -49,15 +49,15 @@ func StopBlockProfile() {
 	}
 	f.Close()
 }
- 
+
 func SetMemProfileRate(rate int) {
 	runtime.MemProfileRate = rate
 }
- 
+
 func GC() {
 	runtime.GC()
 }
- 
+
 func DumpHeap() {
 	filename := "heap-" + strconv.Itoa(pid) + "-" + strconv.Itoa(int(atomic.AddInt32(&heapProfileCounter, 1))) + ".pprof"
 	f, err := os.Create(filename)
@@ -70,57 +70,57 @@ func DumpHeap() {
 	}
 	f.Close()
 }
- 
+
 func showSystemStat(interval time.Duration, count int) {
- 
+
 	usage1 := &syscall.Rusage{}
 	var lastUtime int64
 	var lastStime int64
- 
+
 	counter := 0
 	for {
- 
+
 		//http://man7.org/linux/man-pages/man3/vtimes.3.html
 		syscall.Getrusage(syscall.RUSAGE_SELF, usage1)
- 
+
 		utime := usage1.Utime.Nano()
 		stime := usage1.Stime.Nano()
 		userCPUUtil := float64(utime-lastUtime) * 100 / float64(interval)
 		sysCPUUtil := float64(stime-lastStime) * 100 / float64(interval)
 		memUtil := usage1.Maxrss * 1024
- 
+
 		lastUtime = utime
 		lastStime = stime
- 
+
 		if counter > 0 {
 			fmt.Printf("cpu: %3.2f%% us  %3.2f%% sy, mem:%s \n", userCPUUtil, sysCPUUtil, toH(uint64(memUtil)))
 		}
- 
+
 		counter += 1
 		if count >= 1 && count < counter {
 			return
 		}
 		time.Sleep(interval)
 	}
- 
+
 }
- 
+
 func ShowSystemStat(seconds int) {
 	go func() {
 		interval := time.Duration(seconds) * time.Second
 		showSystemStat(interval, 0)
 	}()
 }
- 
+
 func PrintSystemStats() {
 	interval := time.Duration(1) * time.Second
 	showSystemStat(interval, 1)
 }
- 
+
 func ShowGCStat() {
 	go func() {
 		var numGC int64
- 
+
 		interval := time.Duration(100) * time.Millisecond
 		gcstats := &debug.GCStats{PauseQuantiles: make([]time.Duration, 100)}
 		memStats := &runtime.MemStats{}
@@ -128,7 +128,7 @@ func ShowGCStat() {
 			debug.ReadGCStats(gcstats)
 			if gcstats.NumGC > numGC {
 				runtime.ReadMemStats(memStats)
- 
+
 				printGC(memStats, gcstats)
 				numGC = gcstats.NumGC
 			}
@@ -136,24 +136,24 @@ func ShowGCStat() {
 		}
 	}()
 }
- 
+
 func PrintGCSummary() {
 	memStats := &runtime.MemStats{}
 	runtime.ReadMemStats(memStats)
 	gcstats := &debug.GCStats{PauseQuantiles: make([]time.Duration, 100)}
 	debug.ReadGCStats(gcstats)
- 
+
 	printGC(memStats, gcstats)
 }
- 
+
 func printGC(memStats *runtime.MemStats, gcstats *debug.GCStats) {
- 
+
 	if gcstats.NumGC > 0 {
 		lastPause := gcstats.Pause[0]
 		elapsed := time.Now().Sub(startTime)
 		overhead := float64(gcstats.PauseTotal) / float64(elapsed) * 100
 		allocatedRate := float64(memStats.TotalAlloc) / elapsed.Seconds()
- 
+
 		fmt.Printf("NumGC:%d Pause:%s Pause(Avg):%s Overhead:%3.2f%% Alloc:%s Sys:%s Alloc(Rate):%s/s Histogram:%s %s %s \n",
 			gcstats.NumGC,
 			toS(lastPause),
@@ -169,14 +169,14 @@ func printGC(memStats *runtime.MemStats, gcstats *debug.GCStats) {
 		// while GC has disabled
 		elapsed := time.Now().Sub(startTime)
 		allocatedRate := float64(memStats.TotalAlloc) / elapsed.Seconds()
- 
+
 		fmt.Printf("Alloc:%s Sys:%s Alloc(Rate):%s/s\n",
 			toH(memStats.Alloc),
 			toH(memStats.Sys),
 			toH(uint64(allocatedRate)))
 	}
 }
- 
+
 func avg(items []time.Duration) time.Duration {
 	var sum time.Duration
 	for _, item := range items {
@@ -184,7 +184,7 @@ func avg(items []time.Duration) time.Duration {
 	}
 	return time.Duration(int64(sum) / int64(len(items)))
 }
- 
+
 // human readable format
 func toH(bytes uint64) string {
 	switch {
@@ -198,10 +198,10 @@ func toH(bytes uint64) string {
 		return fmt.Sprintf("%.2fG", float64(bytes)/1024/1024/1024)
 	}
 }
- 
+
 // short string format
 func toS(d time.Duration) string {
- 
+
 	u := uint64(d)
 	if u < uint64(time.Second) {
 		switch {
@@ -224,5 +224,5 @@ func toS(d time.Duration) string {
 			return fmt.Sprintf("%.2fh", float64(u)/1000/1000/1000/60/60)
 		}
 	}
- 
+
 }

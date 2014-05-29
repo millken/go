@@ -1,7 +1,6 @@
-
 /* Ping
 http://jan.newmarch.name/go/socket/chapter-socket.html
- */
+*/
 package main
 
 import (

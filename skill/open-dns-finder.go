@@ -1,16 +1,16 @@
 package main
 
 import (
-	"fmt"
-	"sync"
 	"./godns"
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
-	"io/ioutil"
 )
 
 var (
@@ -30,7 +30,6 @@ func init() {
 	}
 }
 
-
 //http://play.golang.org/p/TZbIBev4pU
 
 func ipStringToI32(a string) uint32 {
@@ -40,14 +39,14 @@ func ipToI32(ip net.IP) uint32 {
 	ip = ip.To4()
 	return uint32(ip[0])<<24 | uint32(ip[1])<<16 | uint32(ip[2])<<8 | uint32(ip[3])
 }
- 
+
 func htons(port uint16) uint16 {
-    var (
-        lowbyte  uint8  = uint8(port)
-        highbyte uint8  = uint8(port << 8)
-        ret      uint16 = uint16(lowbyte)<<8 + uint16(highbyte)
-    )
-    return ret
+	var (
+		lowbyte  uint8  = uint8(port)
+		highbyte uint8  = uint8(port << 8)
+		ret      uint16 = uint16(lowbyte)<<8 + uint16(highbyte)
+	)
+	return ret
 }
 
 func i32ToIP(a uint32) net.IP {
@@ -71,10 +70,10 @@ func querydns(ip string) {
 			ret = append(ret, ip)
 		}
 		if *outputFlag != "" {
-			if err := WriteFile(*outputFlag, 0600, fmt.Sprintf("%s\n", ip));err != nil {
+			if err := WriteFile(*outputFlag, 0600, fmt.Sprintf("%s\n", ip)); err != nil {
 				fmt.Printf("write file error : %s", err)
 			}
-		}		
+		}
 		fmt.Printf("[%s] ->%s : %v\n", ip, *domainFlag, ret)
 	}
 }
@@ -109,7 +108,7 @@ func main() {
 
 	lCh := make(chan string)
 	wg := new(sync.WaitGroup)
-    
+
 	// Adding routines to workgroup and running then
 	for i := 0; i < *nConnectFlag; i++ {
 		wg.Add(1)
@@ -134,18 +133,18 @@ func main() {
 		}
 
 	}
-	
+
 	if *dataFileFlag != "" {
-		file, err := os.Open(*dataFileFlag ) // For read access.
+		file, err := os.Open(*dataFileFlag) // For read access.
 		defer file.Close()
 		if err != nil {
-			fmt.Printf("open file %s error: %v\n", *dataFileFlag , err)
-			return 
+			fmt.Printf("open file %s error: %v\n", *dataFileFlag, err)
+			return
 		}
 
 		data, err := ioutil.ReadAll(file)
 		iplist := strings.Split(string(data), "\n")
-		for _,ip := range iplist {
+		for _, ip := range iplist {
 			ip = strings.Trim(ip, "\r\n ")
 			if strings.Index(ip, "/") != -1 {
 				if _, _, err := net.ParseCIDR(ip); err == nil {
@@ -163,7 +162,6 @@ func main() {
 			}
 		}
 	}
-	
 
 	// Closing channel (waiting in goroutines won't continue any more)
 	close(lCh)
@@ -171,4 +169,3 @@ func main() {
 	// Waiting for all goroutines to finish (otherwise they die as main routine dies)
 	wg.Wait()
 }
-

@@ -8,12 +8,12 @@ import (
 	"./godns"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"syscall"
-	"io/ioutil"
 )
 
 var (
@@ -55,14 +55,14 @@ func ipToI32(ip net.IP) uint32 {
 	ip = ip.To4()
 	return uint32(ip[0])<<24 | uint32(ip[1])<<16 | uint32(ip[2])<<8 | uint32(ip[3])
 }
- 
+
 func htons(port uint16) uint16 {
-    var (
-        lowbyte  uint8  = uint8(port)
-        highbyte uint8  = uint8(port << 8)
-        ret      uint16 = uint16(lowbyte)<<8 + uint16(highbyte)
-    )
-    return ret
+	var (
+		lowbyte  uint8  = uint8(port)
+		highbyte uint8  = uint8(port << 8)
+		ret      uint16 = uint16(lowbyte)<<8 + uint16(highbyte)
+	)
+	return ret
 }
 
 func i32ToIP(a uint32) net.IP {
@@ -124,7 +124,7 @@ func output(resultChan chan resultStruct, doneChan chan int) {
 		if result.err == nil {
 			fmt.Printf("%s: %v\n", result.addr, result.data)
 			if *outputFlag != "" {
-				if err := WriteFile(*outputFlag, 0600, fmt.Sprintf("%s\n", result.addr));err != nil {
+				if err := WriteFile(*outputFlag, 0600, fmt.Sprintf("%s\n", result.addr)); err != nil {
 					fmt.Printf("write file error : %s", err)
 				}
 			}
@@ -134,23 +134,21 @@ func output(resultChan chan resultStruct, doneChan chan int) {
 			error++
 		}
 	}
-	fmt.Fprintf(os.Stderr, "Complete %d (success=%d, failure=%d)\n", ok + error, ok, error)
+	fmt.Fprintf(os.Stderr, "Complete %d (success=%d, failure=%d)\n", ok+error, ok, error)
 	doneChan <- 1
 }
-
 
 func main() {
 	workChan := make(chan *Work, *nConnectFlag)
 	resultChan := make(chan resultStruct, *nConnectFlag) // grabbers send results to output
-	doneChan := make(chan int, *nConnectFlag)            // let grabbers signal completion	
-	
+	doneChan := make(chan int, *nConnectFlag)            // let grabbers signal completion
 
 	for i := 0; i < *nConnectFlag; i++ {
 		go worker(i, workChan, resultChan)
 	}
-	
+
 	go output(resultChan, doneChan)
-	
+
 	if *ipFlag != "" {
 		if strings.Index(*ipFlag, "/") != -1 {
 			if _, _, err := net.ParseCIDR(*ipFlag); err == nil {
@@ -161,7 +159,7 @@ func main() {
 				ip_end := addr32 | ^(0xFFFFFFFF << (32 - mask32))
 				fmt.Printf("ip_start :%d(%s) -> ip_end %d(%s)\n", ip_start, i32ToIP(ip_start).String(), ip_end, i32ToIP(ip_end).String())
 				for ipint32 := ip_start; ipint32 <= ip_end; ipint32++ {
-					workChan <- &Work{ i32ToIP(ipint32).String() }
+					workChan <- &Work{i32ToIP(ipint32).String()}
 				}
 			} else {
 				fmt.Fprintf(os.Stderr, "%s: Error %s\n", *ipFlag, err)
@@ -169,18 +167,18 @@ func main() {
 		}
 
 	}
-	
+
 	if *dataFileFlag != "" {
-		file, err := os.Open(*dataFileFlag ) // For read access.
+		file, err := os.Open(*dataFileFlag) // For read access.
 		defer file.Close()
 		if err != nil {
-			fmt.Printf("open file %s error: %v\n", *dataFileFlag , err)
-			return 
+			fmt.Printf("open file %s error: %v\n", *dataFileFlag, err)
+			return
 		}
 
 		data, err := ioutil.ReadAll(file)
 		iplist := strings.Split(string(data), "\n")
-		for _,ip := range iplist {
+		for _, ip := range iplist {
 			ip = strings.Trim(ip, "\r\n ")
 			fmt.Printf("%s", ip)
 			if strings.Index(ip, "/") != -1 {
@@ -191,18 +189,18 @@ func main() {
 					ip_start := addr32 & (0xFFFFFFFF << (32 - mask32))
 					ip_end := addr32 | ^(0xFFFFFFFF << (32 - mask32))
 					for ipint32 := ip_start; ipint32 <= ip_end; ipint32++ {
-						workChan <- &Work{ i32ToIP(ipint32).String() }
+						workChan <- &Work{i32ToIP(ipint32).String()}
 					}
 				}
 			} else {
-				workChan <- &Work{ ip }
+				workChan <- &Work{ip}
 			}
 		}
 	}
-	
+
 	for n := 0; n < *nConnectFlag; n++ {
-        workChan <- nil
-    }
+		workChan <- nil
+	}
 
 	close(resultChan)
 
