@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"runtime"
 )
 
 var _ENV map[string]string
@@ -37,4 +38,5 @@ func main() {
 
 	fmt.Println(_ENV["KEY"])
 	fmt.Println(_ENV["KEY2"])
+	fmt.Println(runtime.GOOS)
 }
