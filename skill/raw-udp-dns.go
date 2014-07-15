@@ -27,10 +27,10 @@ type IpHeader struct {
 }
 
 type UdpHdr struct {
-	Source	int
-	Dest	int
-	Len	int
-	Check 	int
+	Source	uint16
+	Dest	uint16
+	Len	uint16
+	Check 	uint16
 }
 
 type PsdHeader struct {
