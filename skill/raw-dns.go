@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"strconv"
 	"strings"
+	"net"
 	"unsafe"
 )
 
@@ -80,6 +81,28 @@ func inet_addr(ipaddr string) uint32 {
     ret = ip[3]<<24 + ip[2]<<16 + ip[1]<<8 + ip[0]
     return uint32(ret)
 }
+//http://play.golang.org/p/TZbIBev4pU
+
+func ipStringToI32(a string) uint32 {
+	return ipToI32(net.ParseIP(a))
+}
+func ipToI32(ip net.IP) uint32 {
+	ip = ip.To4()
+	return uint32(ip[0])<<24 | uint32(ip[1])<<16 | uint32(ip[2])<<8 | uint32(ip[3])
+}
+
+func htons(port uint16) uint16 {
+	var (
+		lowbyte  uint8  = uint8(port)
+		highbyte uint8  = uint8(port << 8)
+		ret      uint16 = uint16(lowbyte)<<8 + uint16(highbyte)
+	)
+	return ret
+}
+
+func i32ToIP(a uint32) net.IP {
+	return net.IPv4(byte(a>>24), byte(a>>16), byte(a>>8), byte(a))
+}
 
 func CheckSum(data []byte) uint16 {
 	var (
@@ -100,13 +123,6 @@ func CheckSum(data []byte) uint16 {
 	return uint16(^sum)
 }
 
-func htons(port uint16) uint16 {
-    var (
-        high uint16 = port >> 8
-        ret  uint16 = port<<8 + high
-    )
-    return ret
-}
 func ParseDomainName(domain string) []byte {
 	//要将域名解析成相应的格式，例如：
 	//"www.google.com"会被解析成"0x03www0x06google0x03com0x00"
@@ -138,8 +154,8 @@ func main() {
 
 	//udphdr_len := 8
 
-    psdheader.SrcAddr = inet_addr("5.47.30.2")
-    psdheader.DstAddr = inet_addr("127.0.0.1")
+    psdheader.SrcAddr = ipStringToI32("8.8.8.8")
+    psdheader.DstAddr = ipStringToI32("127.0.0.1")
     psdheader.Filler = 0
     psdheader.Protocol = syscall.IPPROTO_UDP
     psdheader.Len = uint16(unsafe.Sizeof(UdpHdr{})) + uint16(unsafe.Sizeof(DNSHeader{})) + uint16(len(format_domain)) + uint16(unsafe.Sizeof(DNSQuery{}))
@@ -154,8 +170,8 @@ func main() {
 	ipheader.TTL = 64
 	ipheader.Protocol = syscall.IPPROTO_UDP
 	ipheader.Checksum =	0
-	ipheader.Src = inet_addr("5.47.30.2")
-	ipheader.Dst = inet_addr("127.0.0.1")
+	ipheader.Src = ipStringToI32("8.8.8.8")
+	ipheader.Dst = ipStringToI32("127.0.0.1")
 	
 
 	udphdr.Source = 0x74b8
@@ -164,7 +180,7 @@ func main() {
 	udphdr.Check = 0
 				
 	//填充dns首部
-	dns_header.ID = 0xFFFF
+	dns_header.ID = 0x3f58
 	dns_header.SetFlag(0, 0, 0, 0, 1, 0, 0)
 	dns_header.QuestionCount = 1
 	dns_header.AnswerRRs = 0
@@ -188,7 +204,8 @@ func main() {
     ipheader.Checksum = CheckSum(buffer.Bytes())
     
     /*接下来清空buffer，填充实际要发送的部分*/
-    buffer.Reset()    	
+    buffer.Reset()   
+    //binary.Write(&buffer, binary.BigEndian, psdheader) 	
 	//binary.Write(&buffer, binary.BigEndian, ipheader)
 	binary.Write(&buffer, binary.BigEndian, udphdr)
 	//buffer中是我们要发送的数据，里面的内容是DNS首部+查询内容+DNS查询首部
