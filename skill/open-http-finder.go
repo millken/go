@@ -19,6 +19,7 @@ var (
 	wordFlag = flag.String("word", "<title>", "match word")
 	ipFlag       = flag.String("ip", "", "ip address(es) cidr to scan. example 8.8.8.8/24")
 	outputFlag   = flag.String("output", "", "output file")
+	total = 0;
 )
 
 func init() {
@@ -57,8 +58,9 @@ func queryhttp(ip string) {
 	httpx := NewHttpx(*urlFlag)
 	httpx.SetTargetIP(ip)
 	response, err := httpx.Send()
+	total = total + 1
 	if err != nil {
-		fmt.Printf("fail : %s\n",  ip)
+		fmt.Printf("[%d] connect error : %s\n",  total, ip)
 	}else{
 		bodyString := string(response)
 		if strings.Contains(bodyString, *wordFlag) {
@@ -67,9 +69,9 @@ func queryhttp(ip string) {
 					fmt.Printf("write file error : %s", err)
 				}
 			}
-			fmt.Printf("ok : %s\n", ip)		
+			fmt.Printf("[%d] ok : %s\n", total, ip)		
 		}
-
+		fmt.Printf("[%d] no match : %s\n", total, ip)	
 	}
 }
 
