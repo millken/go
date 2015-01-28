@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"github.com/millken/logger"
-	"os"
-	"os/signal"
+	"runtime"
+	"sync"
 )
 
 var (
@@ -12,6 +12,7 @@ var (
 	config     tomlConfig
 	configPath string
 	gitVersion string
+	workerCh   = make(chan string)
 )
 
 func init() {
@@ -29,10 +30,19 @@ func main() {
 	if err != nil {
 		logger.Exitf("Read config failed.Err = %s", err.Error())
 	}
+
+	numCpus := runtime.NumCPU()
+	runtime.GOMAXPROCS(numCpus)
+
+	wg := new(sync.WaitGroup)
+	for i := 0; i < numCpus; i++ {
+		wg.Add(1)
+		go startWorker(i, workerCh, wg)
+	}
+
 	startKafkaService()
-	sigChan := make(chan os.Signal, 3)
 
-	signal.Notify(sigChan, os.Interrupt, os.Kill)
+	close(workerCh)
+	wg.Wait()
 
-	<-sigChan
 }
