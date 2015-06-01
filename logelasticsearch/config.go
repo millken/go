@@ -8,7 +8,9 @@ import (
 )
 
 type tomlConfig struct {
-	Kafka KafkaInputConfig `toml:"kafka"`
+	Ipdb                string
+	KafkaInput          KafkaInputConfig
+	ElasticSearchOutput ElasticSearchOutputConfig
 }
 
 type KafkaInputConfig struct {
@@ -36,6 +38,38 @@ type KafkaInputConfig struct {
 	EventBufferSize  int    `toml:"event_buffer_size"`
 }
 
+// ConfigStruct for ElasticSearchOutput plugin.
+type ElasticSearchOutputConfig struct {
+	// Interval at which accumulated messages should be bulk indexed to
+	// ElasticSearch, in milliseconds (default 1000, i.e. 1 second).
+	FlushInterval uint32 `toml:"flush_interval"`
+	// Number of messages that triggers a bulk indexation to ElasticSearch
+	// (default to 10)
+	FlushCount int `toml:"flush_count"`
+	// ElasticSearch server address. This address also defines the Bulk
+	// indexing mode. For example, "http://localhost:9200" defines a server
+	// accessible on localhost and the indexing will be done with the HTTP
+	// Bulk API, whereas "udp://192.168.1.14:9700" defines a server accessible
+	// on the local network and the indexing will be done with the UDP Bulk
+	// API. (default to "http://localhost:9200")
+	Server string
+	// Optional subsection for TLS configuration of ElasticSearch connections. If
+	// unspecified, the default ElasticSearch settings will be used.
+	//Tls tcp.TlsConfig
+	// Optional ElasticSearch username for HTTP authentication. This is useful
+	// if you have put your ElasticSearch cluster behind a proxy like nginx.
+	// and turned on authentication.
+	Username string `toml:"username"`
+	// Optional password for HTTP authentication.
+	Password string `toml:"password"`
+	// Overall timeout
+	HTTPTimeout uint32 `toml:"http_timeout"`
+	// Disable both TCP and HTTP keepalives
+	HTTPDisableKeepalives bool `toml:"http_disable_keepalives"`
+	// Resolve and connect timeout only
+	ConnectTimeout uint32 `toml:"connect_timeout"`
+}
+
 func LoadConfig(configPath string) (err error) {
 
 	p, err := os.Open(configPath)
@@ -50,7 +84,7 @@ func LoadConfig(configPath string) (err error) {
 	if err != nil {
 		hn = "logelasticsearch"
 	}
-	config.Kafka = KafkaInputConfig{
+	config.KafkaInput = KafkaInputConfig{
 		Id:                         hn,
 		MetadataRetries:            3,
 		WaitForElection:            250,
@@ -64,6 +98,16 @@ func LoadConfig(configPath string) (err error) {
 		MaxWaitTime:                250,
 		OffsetMethod:               "Manual",
 		EventBufferSize:            16,
+	}
+	config.ElasticSearchOutput = ElasticSearchOutputConfig{
+		FlushInterval:         1000,
+		FlushCount:            10,
+		Server:                "http://localhost:9200",
+		Username:              "",
+		Password:              "",
+		HTTPTimeout:           0,
+		HTTPDisableKeepalives: false,
+		ConnectTimeout:        0,
 	}
 
 	if _, err = toml.Decode(string(contents), &config); err != nil {

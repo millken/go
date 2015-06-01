@@ -39,7 +39,7 @@ func (k *KafkaInput) writeCheckpoint(offset int64) (err error) {
 }
 
 func (k *KafkaInput) Init() (err error) {
-	k.config = config.Kafka
+	k.config = config.KafkaInput
 	if len(k.config.Addrs) == 0 {
 		return errors.New("addrs must have at least one entry")
 	}
@@ -177,6 +177,7 @@ func readCheckpoint(filename string) (offset int64, err error) {
 }
 
 func startKafkaService() {
+	logger.Info("startKafkaService()")
 	k := new(KafkaInput)
 	if err := k.Init(); err != nil {
 		logger.Error("Init Kafka service Fail.Err = %s", err.Error())

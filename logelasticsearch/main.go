@@ -13,6 +13,7 @@ var (
 	configPath string
 	gitVersion string
 	workerCh   = make(chan string)
+	esCh       = make(chan map[string]interface{})
 )
 
 func init() {
@@ -25,6 +26,7 @@ func main() {
 	var err error
 	flag.StringVar(&configPath, "config", "ngx2es.toml", "config path")
 	flag.Parse()
+	logger.Global = logger.NewDefaultLogger(logger.FINEST)
 	logger.Info("Loading config : %s, version: %s", configPath, VERSION)
 	err = LoadConfig(configPath)
 	if err != nil {
@@ -33,6 +35,11 @@ func main() {
 
 	numCpus := runtime.NumCPU()
 	runtime.GOMAXPROCS(numCpus)
+
+	if err = loadIpdb(); err != nil {
+		logger.Exitf("Load ipdb failed.Err = %s", err.Error())
+	}
+	startElasticSearchService()
 
 	wg := new(sync.WaitGroup)
 	for i := 0; i < numCpus; i++ {
