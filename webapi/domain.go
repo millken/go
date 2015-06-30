@@ -15,7 +15,7 @@ import (
 )
 
 var (
-    regex_nameserver = regexp.MustCompile(`(nameserver|Name Server|NS [0-9]+\s*|Hostname\.+):\s*(.*)`)
+    regex_nameserver = regexp.MustCompile(`(nameserver|Name Server|NS [0-9]+\s*|Hostname\.+):[ ]*([a-zA-Z0-9_\.\-]+)`)
 )
 
 type DomainResource struct {
