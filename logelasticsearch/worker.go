@@ -63,6 +63,11 @@ func logwork(logs string) {
 	dat["country"] = ip[0]
 	dat["province"] = ip[1]
 	dat["isp"] = strings.Trim(ip[2], "\u0000")
+
+	request := strings.Fields(dat["request"].(string))
+	dat["method"] = request[0]
+	dat["path"] = strings.SplitN(request[1], "?", 2)[0]
+
 	esCh <- dat
 	logger.Debug("%s %v", dat["Hostname"], dat)
 }

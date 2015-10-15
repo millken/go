@@ -8,7 +8,7 @@ import (
 	"github.com/millken/logger"
 	"os"
 	"path/filepath"
-	"sync/atomic"
+	//"sync/atomic"
 	"time"
 )
 
@@ -17,10 +17,8 @@ type KafkaInput struct {
 	processMessageFailures int64
 
 	config             KafkaInputConfig
-	clientConfig       *sarama.ClientConfig
-	consumerConfig     *sarama.ConsumerConfig
-	client             *sarama.Client
-	consumer           *sarama.Consumer
+	clientConfig       *sarama.Config
+	consumer           sarama.Consumer
 	checkpointFile     *os.File
 	stopChan           chan bool
 	checkpointFilename string
@@ -47,30 +45,27 @@ func (k *KafkaInput) Init() (err error) {
 		k.config.Group = k.config.Id
 	}
 
-	k.clientConfig = sarama.NewClientConfig()
-	k.clientConfig.MetadataRetries = k.config.MetadataRetries
-	k.clientConfig.WaitForElection = time.Duration(k.config.WaitForElection) * time.Millisecond
-	k.clientConfig.BackgroundRefreshFrequency = time.Duration(k.config.BackgroundRefreshFrequency) * time.Millisecond
+	k.clientConfig = sarama.NewConfig()
+	k.clientConfig.Metadata.Retry.Max = k.config.MetadataRetries
+	k.clientConfig.Metadata.Retry.Backoff = time.Duration(k.config.WaitForElection) * time.Millisecond
+	k.clientConfig.Metadata.RefreshFrequency = time.Duration(k.config.BackgroundRefreshFrequency) * time.Millisecond
 
-	k.clientConfig.DefaultBrokerConf = sarama.NewBrokerConfig()
-	k.clientConfig.DefaultBrokerConf.MaxOpenRequests = k.config.MaxOpenRequests
-	k.clientConfig.DefaultBrokerConf.DialTimeout = time.Duration(k.config.DialTimeout) * time.Millisecond
-	k.clientConfig.DefaultBrokerConf.ReadTimeout = time.Duration(k.config.ReadTimeout) * time.Millisecond
-	k.clientConfig.DefaultBrokerConf.WriteTimeout = time.Duration(k.config.WriteTimeout) * time.Millisecond
+	k.clientConfig.Net.MaxOpenRequests = k.config.MaxOpenRequests
+	k.clientConfig.Net.DialTimeout = time.Duration(k.config.DialTimeout) * time.Millisecond
+	k.clientConfig.Net.ReadTimeout = time.Duration(k.config.ReadTimeout) * time.Millisecond
+	k.clientConfig.Net.WriteTimeout = time.Duration(k.config.WriteTimeout) * time.Millisecond
 
-	k.consumerConfig = sarama.NewConsumerConfig()
-	k.consumerConfig.DefaultFetchSize = k.config.DefaultFetchSize
-	k.consumerConfig.MinFetchSize = k.config.MinFetchSize
-	k.consumerConfig.MaxMessageSize = k.config.MaxMessageSize
-	k.consumerConfig.MaxWaitTime = time.Duration(k.config.MaxWaitTime) * time.Millisecond
+	k.clientConfig.Consumer.Fetch.Default = k.config.DefaultFetchSize
+	k.clientConfig.Consumer.Fetch.Min = k.config.MinFetchSize
+	k.clientConfig.Consumer.Fetch.Max = k.config.MaxMessageSize
+	k.clientConfig.Consumer.MaxWaitTime = time.Duration(k.config.MaxWaitTime) * time.Millisecond
 	k.checkpointFilename = filepath.Join("kafka",
 		fmt.Sprintf("%s.%d.offset.bin", k.config.Topic, k.config.Partition))
 
 	switch k.config.OffsetMethod {
 	case "Manual":
-		k.consumerConfig.OffsetMethod = sarama.OffsetMethodManual
 		if fileExists(k.checkpointFilename) {
-			if k.consumerConfig.OffsetValue, err = readCheckpoint(k.checkpointFilename); err != nil {
+			if k.config.OffsetValue, err = readCheckpoint(k.checkpointFilename); err != nil {
 				return fmt.Errorf("readCheckpoint %s", err)
 			}
 		} else {
@@ -82,14 +77,14 @@ func (k *KafkaInput) Init() (err error) {
 			}
 		}
 	case "Newest":
-		k.consumerConfig.OffsetMethod = sarama.OffsetMethodNewest
+		k.config.OffsetValue = sarama.OffsetNewest
 		if fileExists(k.checkpointFilename) {
 			if err = os.Remove(k.checkpointFilename); err != nil {
 				return
 			}
 		}
 	case "Oldest":
-		k.consumerConfig.OffsetMethod = sarama.OffsetMethodOldest
+		k.config.OffsetValue = sarama.OffsetOldest
 		if fileExists(k.checkpointFilename) {
 			if err = os.Remove(k.checkpointFilename); err != nil {
 				return
@@ -99,20 +94,17 @@ func (k *KafkaInput) Init() (err error) {
 		return fmt.Errorf("invalid offset_method: %s", k.config.OffsetMethod)
 	}
 
-	k.consumerConfig.EventBufferSize = k.config.EventBufferSize
-
-	k.client, err = sarama.NewClient(k.config.Id, k.config.Addrs, k.clientConfig)
-	if err != nil {
-		return
-	}
-	k.consumer, err = sarama.NewConsumer(k.client, k.config.Topic, k.config.Partition, k.config.Group, k.consumerConfig)
+	k.consumer, err = sarama.NewConsumer(k.config.Addrs, k.clientConfig)
 	return
+
 }
 
 func (k *KafkaInput) Run() (err error) {
+	consumer, err := k.consumer.ConsumePartition(k.config.Topic, k.config.Partition, k.config.OffsetValue)
+
 	defer func() {
 		k.consumer.Close()
-		k.client.Close()
+		consumer.Close()
 		if k.checkpointFile != nil {
 			k.checkpointFile.Close()
 		}
@@ -121,30 +113,8 @@ func (k *KafkaInput) Run() (err error) {
 
 	for {
 		select {
-		case event, ok := <-k.consumer.Events():
-			if !ok {
-				return
-			}
-			atomic.AddInt64(&k.processMessageCount, 1)
-			if event.Err != nil {
-				if event.Err == sarama.OffsetOutOfRange {
-					logger.Error(fmt.Errorf("removing the out of range checkpoint file and stopping"))
-					if err := os.Remove(k.checkpointFilename); err != nil {
-						logger.Error(err)
-					}
-					return
-				}
-				atomic.AddInt64(&k.processMessageFailures, 1)
-				logger.Error(event.Err)
-				break
-			}
-
-			if k.consumerConfig.OffsetMethod == sarama.OffsetMethodManual {
-				if err = k.writeCheckpoint(event.Offset + 1); err != nil {
-					return
-				}
-			}
-			workerCh <- string(event.Value)
+		case message := <-consumer.Messages():
+			workerCh <- string(message.Value)
 			//logger.Debug(string(event.Value))
 
 		case <-k.stopChan:

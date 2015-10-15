@@ -35,7 +35,8 @@ type KafkaInputConfig struct {
 	MaxMessageSize   int32  `toml:"max_message_size"`
 	MaxWaitTime      uint32 `toml:"max_wait_time"`
 	OffsetMethod     string `toml:"offset_method"` // Manual, Newest, Oldest
-	EventBufferSize  int    `toml:"event_buffer_size"`
+	OffsetValue      int64
+	EventBufferSize  int `toml:"event_buffer_size"`
 }
 
 // ConfigStruct for ElasticSearchOutput plugin.
