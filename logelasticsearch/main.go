@@ -11,6 +11,7 @@ var (
 	VERSION    string = "0.1"
 	config     tomlConfig
 	configPath string
+	debugLevel string
 	gitVersion string
 	workerCh   = make(chan string)
 	esCh       = make(chan map[string]interface{})
@@ -25,8 +26,20 @@ func init() {
 func main() {
 	var err error
 	flag.StringVar(&configPath, "config", "ngx2es.toml", "config path")
+	flag.StringVar(&debugLevel, "debug", "INFO", "FINE|DEBUG|TRACE|INFO|ERROR")
 	flag.Parse()
-	logger.Global = logger.NewDefaultLogger(logger.FINEST)
+	logLevel := logger.INFO
+	switch debugLevel {
+	case "FINE":
+		logLevel = logger.FINE
+	case "DEBUG":
+		logLevel = logger.DEBUG
+	case "TRACE":
+		logLevel = logger.TRACE
+	case "ERROR":
+		logLevel = logger.ERROR
+	}
+	logger.Global = logger.NewDefaultLogger(logLevel)
 	logger.Info("Loading config : %s, version: %s", configPath, VERSION)
 	err = LoadConfig(configPath)
 	if err != nil {

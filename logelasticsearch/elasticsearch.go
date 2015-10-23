@@ -86,7 +86,7 @@ func (o *ElasticSearchOutput) receiver(inChan chan map[string]interface{}) {
 			outBytes, _ := json.Marshal(pack)
 
 			t := time.Now()
-			h1 := fmt.Sprintf("{\"index\":{\"_index\":\"nginx-%s\",\"_type\":\"%s\"}}", t.Format("2006-01-02"), pack["Logger"])
+			h1 := fmt.Sprintf("{\"index\":{\"_index\":\"nginx-%s\",\"_type\":\"nginx.access\"}}", t.Format("2006-01-02"))
 
 			H := []byte(h1)
 			packBytes = append(packBytes, H...)

@@ -66,8 +66,22 @@ func logwork(logs string) {
 
 	request := strings.Fields(dat["request"].(string))
 	dat["method"] = request[0]
-	dat["path"] = strings.SplitN(request[1], "?", 2)[0]
-
+	r1 := strings.SplitN(request[1], "?", 2)
+	if len(r1) == 2 {
+		dat["path"] = r1[0]
+	} else {
+		dat["path"] = "/"
+	}
+	if dat["user_agent_browser"] != nil {
+		dat["user_agent_browser"] = strings.ToLower(dat["user_agent_browser"].(string))
+	} else {
+		dat["user_agent_browser"] = "-"
+	}
+	if dat["user_agent_os"] != nil {
+		dat["user_agent_os"] = strings.ToLower(dat["user_agent_os"].(string))
+	} else {
+		dat["user_agent_os"] = "-"
+	}
+	logger.Debug("%v", dat)
 	esCh <- dat
-	logger.Debug("%s %v", dat["Hostname"], dat)
 }

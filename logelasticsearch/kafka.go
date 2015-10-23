@@ -115,7 +115,7 @@ func (k *KafkaInput) Run() (err error) {
 		select {
 		case message := <-consumer.Messages():
 			workerCh <- string(message.Value)
-			//logger.Debug(string(event.Value))
+			logger.Info(string(message.Value))
 
 		case <-k.stopChan:
 			return
