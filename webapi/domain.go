@@ -71,7 +71,17 @@ func (this DomainResource) DomainNameServer(request *restful.Request, response *
 	body, err := whois.Whois(domain)
 	if err != nil {
 		log.Printf("get Whois Error : %s", err.Error())
-		response.WriteEntity(rjson)
+		options := &godns.LookupOptions{
+			DNSServers: godns.ChinaDNSServers, Net: "udp"}	
+			nsserver, err = godns.LookupNS(domain, options)
+			if err != nil {
+				log.Printf("get ns Error : %s", err.Error())
+			}else{
+				rjson.Status = 1
+				rjson.Info = ""
+				rjson.Data = nsserver
+			}
+			response.WriteEntity(rjson)
     } else {
         nameservers := regex_nameserver.FindAllStringSubmatch(body, -1)
 		for _, nameserver := range nameservers {
