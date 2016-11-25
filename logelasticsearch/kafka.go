@@ -101,6 +101,10 @@ func (k *KafkaInput) Init() (err error) {
 
 func (k *KafkaInput) Run() (err error) {
 	consumer, err := k.consumer.ConsumePartition(k.config.Topic, k.config.Partition, k.config.OffsetValue)
+	if err != nil {
+		logger.Error("Run Kafka service Fail.Err = %s", err.Error())
+		//return
+	}
 
 	defer func() {
 		k.consumer.Close()

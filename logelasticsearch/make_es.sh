@@ -22,6 +22,7 @@ y=`date  --date="$start_date" +%Y`
 m=`date  --date="$start_date" +%m`
 d=`date  --date="$start_date" +%d`
 
+curl -XDELETE "http://$server:9200/nginx-$y-$m-$d/"
 curl -XPOST "http://$server:9200/nginx-$y-$m-$d" -d '
 {
     "mappings" : {
@@ -106,6 +107,10 @@ curl -XPOST "http://$server:9200/nginx-$y-$m-$d" -d '
             "index": "not_analyzed"
           },
           "request" : {
+            "type" : "string",
+            "index": "not_analyzed"
+          },
+          "http_host" : {
             "type" : "string",
             "index": "not_analyzed"
           },

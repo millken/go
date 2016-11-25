@@ -64,9 +64,19 @@ func logwork(logs string) {
 	dat["province"] = ip[1]
 	dat["isp"] = strings.Trim(ip[2], "\u0000")
 
+	if dat["request"] == nil {
+		dat["request"] = "GET /"
+	}
 	request := strings.Fields(dat["request"].(string))
-	dat["method"] = request[0]
-	r1 := strings.SplitN(request[1], "?", 2)
+	request_path := "/"
+	request_method := "GET"
+	if len(request) > 1 {
+		request_path = request[1]
+		request_method = request[0]
+	}
+
+	dat["method"] = request_method
+	r1 := strings.SplitN(request_path, "?", 2)
 	if len(r1) == 2 {
 		dat["path"] = r1[0]
 	} else {
