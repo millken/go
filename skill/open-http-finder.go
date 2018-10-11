@@ -15,11 +15,11 @@ import (
 var (
 	nConnectFlag = flag.Int("concurrent", 100, "Number of concurrent connections")
 	dataFileFlag = flag.String("data", "", "File containing message to send to responsive hosts ('%s' will be replaced with host IP)")
-	urlFlag   = flag.String("url", "http://www.google.com", "checkurl, default is : http://www.google.com")
-	wordFlag = flag.String("word", "<title>", "match word")
+	urlFlag      = flag.String("url", "http://www.google.com", "checkurl, default is : http://www.google.com")
+	wordFlag     = flag.String("word", "<title>", "match word")
 	ipFlag       = flag.String("ip", "", "ip address(es) cidr to scan. example 8.8.8.8/24")
 	outputFlag   = flag.String("output", "", "output file")
-	total = 0;
+	total        = 0
 )
 
 func init() {
@@ -60,8 +60,8 @@ func queryhttp(ip string) {
 	response, err := httpx.Send()
 	total = total + 1
 	if err != nil {
-		fmt.Printf("[%d] connect error : %s\n",  total, ip)
-	}else{
+		//fmt.Printf("[%d] connect error : %s %s\n", total, ip, err)
+	} else {
 		bodyString := string(response)
 		if strings.Contains(bodyString, *wordFlag) {
 			if *outputFlag != "" {
@@ -69,9 +69,8 @@ func queryhttp(ip string) {
 					fmt.Printf("write file error : %s", err)
 				}
 			}
-			fmt.Printf("[%d] ok : %s\n", total, ip)		
+			fmt.Printf("[%d] ok : %s\n", total, ip)
 		}
-		fmt.Printf("[%d] no match : %s\n", total, ip)	
 	}
 }
 

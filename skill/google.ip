@@ -1,0 +1,5 @@
+CN
+203.208.40.0/23
+203.208.32.0 - 203.208.63.255 = 203.208.32.0/19 https://www.ipaddressguide.com/cidr
+
+https://ma.ttias.be/whois-at-the-cli-get-all-ip-ranges-from-an-as-number/
