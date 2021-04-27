@@ -7,7 +7,7 @@ import (
     "regexp"
 )
 var (
-    regex_server = regexp.MustCompile(` Whois Server: (.*)`)
+    regex_server = regexp.MustCompile(`[Name Server| Whois Server]: (.*)`)
 )
 
 type WhoisController struct {
