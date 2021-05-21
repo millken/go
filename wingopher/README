@@ -1,0 +1,54 @@
+Setting up a Windows GCE builder from scratch
+
+In Powershell,
+
+1) PS C:\Users\wingopher> bitsadmin /transfer mydownloadjob  /download /priority normal https://storage.googleapis.com/winstrap/winstrap-20140711.exe c:\users\wingopher\Desktop\winstrap.exe
+
+2) Double-click winstrap on the desktop.
+
+3) type “go”, then press enter.
+
+4) click yes yes yes on all the Mercurial and tdm64-gcc installer question defaults.  Ignore the Chrome installer. THEN DO THE tdm64-gcc installer again but do 32-bit this time. You should then have two TDM installs at c:\TDM-GCC-64 and c:\TDM-GCC-32.  Don’t pick other locations. The gobuilder adds those to your path. 
+
+5) double click winstrap again and type “go”+enter.
+
+It should end saying:
+
+Installed Go for windows/amd64 in C:\Users\wingopher\goroot
+Installed commands in C:\Users\wingopher\goroot\bin
+2014/09/04 20:12:14 ran make.bat for arch amd64
+2014/09/04 20:12:14 Installed go to \Users\wingopher\goroot, please add
+\Users\wingopher\goroot\bin to your PATH
+[ Press enter to exit ]
+
+6) Start > Run > cmd.exe
+
+7) Then do:
+
+
+C:\Users\wingopher>mkdir \Users\wingopher\gopath
+
+C:\Users\wingopher>SET GOPATH=\Users\wingopher\gopath
+
+C:\Users\wingopher>SET PATH=\Users\wingopher\goroot\bin;%PATH%
+
+C:\Users\wingopher>echo %PATH%
+\Users\wingopher\goroot\bin;C:\Windows\system32;C:\Windows;C:\Windows\Sy
+stem32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\Wind
+owsPowerShell\v1.0\;sysprep\;C:\Program Files\Google\Compute Engine\sysprep\;C:\
+TDM-GCC-64\bin;C:\Program Files\Mercurial
+
+C:\Users\wingopher>go version
+go version devel +b24422c8828f Thu Sep 04 15:53:45 2014 -0400 windows/amd64
+
+C:\Users\wingopher>go get -u -v golang.org/x/tools/dashboard/builder
+
+Now go set project-wide metadata attributes for “buildkey-windows-amd64” and “buildkey-windows-386” (or buildkey-* whatever)
+
+C:\Users\wingopher>%GOPATH%\bin\builder -v -parallel windows-amd64 windows-386
+
+and you’re done.
+
+
+
+
