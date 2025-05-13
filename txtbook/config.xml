@@ -1,5 +1,0 @@
-<Config>
-	<Redis>
-		<Addr>redisserver:6379</Addr>
-	</Redis>
-</Config>

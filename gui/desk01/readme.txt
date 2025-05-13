@@ -1,1 +1,0 @@
-https://www.polv.cc/post/2020/09/maximize-desktop-app
