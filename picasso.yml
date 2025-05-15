@@ -27,30 +27,18 @@ TRANSLATOR:
     # decl: expand
     enum: cgo
   Typemap:
-    ? raw: "ps_byte"
-      base: 
-      const: false
-      signed: false
-      unsigned: false
-      short: false
-      long: false
-      complex: false
-      opaque: false
-      pointers: 0
-      innerarr: ""
-      outerarr: ""
-    : slices: 0
-      pointers: 0
-      innerarr: ""
-      outerarr: ""
-      unsigned: false
-      kind: 0
-      base: ""
-      raw: "[]byte"
+    {base: "ps_byte"}:
+      base: byte
+      slices: 1
+      pointers: 1
+      unsigned: true
+      kind: 1
+      raw: "bytes"
       bits: 0
 
   PtrTips:
     function:
+      - {target: "ps_canvas_create_with_data", tips: [sref,ref]}
       - {target: "ps_", tips: [ref,ref]}
   Rules: 
     global: 
@@ -62,7 +50,7 @@ TRANSLATOR:
     const:
       - {action: accept, from: "STATUS|COLOR|WRAP|GRADIENT|LINE|COMPOSITE|FILTER|FILL|CHARSET|FONT|TEXT|DRAW|PATH"}
     type:
-      - {action: ignore, from: "ps_byte"}
+      # - {action: ignore, from: "ps_byte"}
     private:
       - {transform: unexport}
     post-global: 

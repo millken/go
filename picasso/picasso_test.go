@@ -1,6 +1,7 @@
 package picasso_test
 
 import (
+	"image"
 	"os"
 	"testing"
 
@@ -19,19 +20,21 @@ func TestVersion(t *testing.T) {
 	r.Equal(picasso.True, init)
 	picassoVersion := picasso.Version()
 	r.Equal(int32(28000), picassoVersion)
-	data := make([]byte, TEST_WIDTH*TEST_HEIGHT*4)
-	canvas := picasso.CanvasCreateWithData(&data[0], picasso.ColorFormatRgb, TEST_WIDTH, TEST_HEIGHT, TEST_WIDTH*4)
+	data := picasso.MakeByte(TEST_WIDTH * TEST_HEIGHT * 4)
+	canvas := picasso.CanvasCreateWithData(data.Byte(), picasso.ColorFormatRgb, TEST_WIDTH, TEST_HEIGHT, TEST_WIDTH*4)
 	r.NotNil(canvas)
 	picasso.CanvasUnref(canvas)
 	r.Equal(picasso.StatusSucceed, picasso.LastStatus())
 }
 
+var testImg *image.RGBA = image.NewRGBA(image.Rect(0, 0, TEST_WIDTH, TEST_HEIGHT))
+
 func TestFlowers(t *testing.T) {
 	r := assert.New(t)
 	init := picasso.Initialize()
 	r.Equal(picasso.True, init)
-	data := make([]byte, TEST_WIDTH*TEST_HEIGHT*4)
-	canvas := picasso.CanvasCreateWithData(&data[0], picasso.ColorFormatRgba, TEST_WIDTH, TEST_HEIGHT, TEST_WIDTH*4)
+	data := picasso.MakeByte(TEST_WIDTH * TEST_HEIGHT * 4)
+	canvas := picasso.CanvasCreateWithData(data.Byte(), picasso.ColorFormatRgba, TEST_WIDTH, TEST_HEIGHT, TEST_WIDTH*4)
 	context := picasso.ContextCreate(canvas, nil)
 	path := picasso.PathCreate()
 	picasso.PathMoveTo(path, &picasso.Point{X: 0, Y: 0})
@@ -48,5 +51,5 @@ func TestFlowers(t *testing.T) {
 	picasso.CanvasUnref(canvas)
 	r.Equal(picasso.StatusSucceed, picasso.LastStatus())
 	picasso.Shutdown()
-	os.WriteFile("test.txt", data, os.ModePerm)
+	os.WriteFile("test.txt", data.Get(), os.ModePerm)
 }
