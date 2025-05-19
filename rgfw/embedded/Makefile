@@ -21,8 +21,13 @@ libRGFW_windows_amd64.dll:
 
 libRGFW_linux_amd64.so:
 	cp ../RGFW/RGFW.h RGFW.c
-	docker run --rm -v $(PWD):/work -e CROSS_TRIPLE=x86_64-linux-gnu -w /work \
-        startergo/crossbuild:latest \
-		apt-get install -y --no-install-recommends libx11-dev mesa-common-dev libglx-dev libxcursor-dev mesa-vulkan-drivers libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libxkbcommon-dev libgles2-mesa-dev libosmesa6-dev && \
+	docker exec rgfw_linux_arm64_build \
     	cc -shared RGFW.c -o libRGFW_linux_amd64.so -D RGFW_IMPLEMENTATION -D RGFW_EXPORT -std=c99 -fPIC -ldl -lpthread -lX11 -lXrandr -lGL
+	rm RGFW.c
+
+libRGFW_linux_arm64.so:
+	rm -f libRGFW_linux_arm64.so
+	cp ../RGFW/RGFW.h RGFW.c
+	docker exec rgfw_linux_arm64_build \
+		gcc -shared RGFW.c -o libRGFW_linux_arm64.so -D RGFW_IMPLEMENTATION -D RGFW_EXPORT -std=c99 -fPIC -ldl -lpthread -lX11 -lXrandr -lGL
 	rm RGFW.c
