@@ -10,8 +10,7 @@ type MouseNotifyCallback uintptr
 
 func SetMouseNotify(callback func(win *Window, point Point, status bool)) {
 	cb := purego.NewCallback(func(win *Window, point uintptr, status Bool) uintptr {
-		var p Point
-		p = *(*Point)(unsafe.Pointer(&point))
+		p := *(*Point)(unsafe.Pointer(&point))
 		callback(win, p, status.IsTrue())
 		return 0
 	})

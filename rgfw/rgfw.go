@@ -4,6 +4,7 @@ import "C"
 import (
 	"runtime"
 	"strings"
+	"sync"
 	"unsafe"
 
 	"github.com/ebitengine/purego"
@@ -495,6 +496,8 @@ const (
 	KeyLast = 256
 )
 
+// Global once to load native library symbols.
+var loadOnce sync.Once
 var (
 	//RGFWDEF void RGFW_setClassName(const char* name);
 	rgfwSetClassName func(*byte)
@@ -552,6 +555,7 @@ func SetClassName(name string) {
 	if len(name) == 0 {
 		return
 	}
+	loadOnce.Do(func() { registerLibFunc() })
 	rgfwSetClassName((*byte)(ToBytePtr(name)))
 }
 
@@ -559,11 +563,12 @@ func SetClipboard(text string) {
 	if len(text) == 0 {
 		return
 	}
+	loadOnce.Do(func() { registerLibFunc() })
 	rgfwWriteClipboard((*byte)(ToBytePtr(text)), uint32(len(text)+1))
 }
 
 func GetClipboard() string {
-
+	loadOnce.Do(func() { registerLibFunc() })
 	ptr := rgfwReadClipboard(nil)
 	if ptr == nil {
 		return ""
@@ -572,61 +577,60 @@ func GetClipboard() string {
 }
 
 func LoadMouse(icon []byte, area Area, channels int32) *Mouse {
+	loadOnce.Do(func() { registerLibFunc() })
 	return rgfwLoadMouse((*byte)(&icon[0]), area, channels)
 }
 
 func GetTime() float64 {
+	loadOnce.Do(func() { registerLibFunc() })
 	return rgfwGetTime()
 }
 func CheckFPS(startTime float64, frameCount uint32, fpsCap uint32) uint32 {
+	loadOnce.Do(func() { registerLibFunc() })
 	return rgfwCheckFPS(startTime, frameCount, fpsCap)
 }
 
 func CreateWindow(title string, r Rect, flags WindowFlags) *Window {
+	loadOnce.Do(func() { registerLibFunc() })
 	return rgfwCreateWindow(title, r, flags)
+}
+
+func registerLibFunc() {
+	libHandle, err := loadLibrary(libraryPath())
+	if err != nil {
+		panic("rgfw: failed to load native library: " + err.Error())
+	}
+	if libHandle == 0 {
+		panic("rgfw: native library not loaded")
+	}
+	purego.RegisterLibFunc(&rgfwSetClassName, libHandle, "RGFW_setClassName")
+	purego.RegisterLibFunc(&rgfwLoadMouse, libHandle, "RGFW_loadMouse")
+	purego.RegisterLibFunc(&rgfwCreateWindow, libHandle, "RGFW_createWindow")
+	purego.RegisterLibFunc(&rgfwWindowMakeCurrent, libHandle, "RGFW_window_makeCurrent")
+	purego.RegisterLibFunc(&rgfwWindowSetIcon, libHandle, "RGFW_window_setIcon")
+	purego.RegisterLibFunc(&rgfwWindowSetMouseStandard, libHandle, "RGFW_window_setMouseStandard")
+	purego.RegisterLibFunc(&rgfwWindowShouldClose, libHandle, "RGFW_window_shouldClose")
+	purego.RegisterLibFunc(&rgfwWindowCheckEvent, libHandle, "RGFW_window_checkEvent")
+	purego.RegisterLibFunc(&rgfwWindowSetShouldClose, libHandle, "RGFW_window_setShouldClose")
+	purego.RegisterLibFunc(&rgfwIsReleased, libHandle, "RGFW_isReleased")
+	purego.RegisterLibFunc(&rgfwWindowSetMouseDefault, libHandle, "RGFW_window_setMouseDefault")
+	purego.RegisterLibFunc(&rgfwWindowSetMouse, libHandle, "RGFW_window_setMouse")
+	purego.RegisterLibFunc(&rgfwWindowShowMouse, libHandle, "RGFW_window_showMouse")
+	purego.RegisterLibFunc(&rgfwWriteClipboard, libHandle, "RGFW_writeClipboard")
+	purego.RegisterLibFunc(&rgfwReadClipboard, libHandle, "RGFW_readClipboard")
+	purego.RegisterLibFunc(&rgfwWindowSwapBuffers, libHandle, "RGFW_window_swapBuffers")
+	purego.RegisterLibFunc(&rgfwFreeMouse, libHandle, "RGFW_freeMouse")
+	purego.RegisterLibFunc(&rgfwWindowClose, libHandle, "RGFW_window_close")
+
+	purego.RegisterLibFunc(&rgfwGetTime, libHandle, "RGFW_getTime")
+	purego.RegisterLibFunc(&rgfwCheckFPS, libHandle, "RGFW_checkFPS")
+
+	purego.RegisterLibFunc(&rgfwSetMouseNotifyCallback, libHandle, "RGFW_setMouseNotifyCallback")
 }
 
 func init() {
 	runtime.LockOSThread()
 
-	var filename string
-	switch runtime.GOOS {
-	case "linux", "freebsd":
-		filename = "libSDL3.so.0"
-	case "windows":
-		filename = "SDL3.dll"
-	case "darwin":
-
-		filename = "/Users/millken/github.com/millken/go/rgfw/RGFW/libRGFW.dylib"
-	}
-
-	lib, err := Load(filename)
-	if err != nil {
-		panic(err)
-	}
-	purego.RegisterLibFunc(&rgfwSetClassName, lib, "RGFW_setClassName")
-	purego.RegisterLibFunc(&rgfwLoadMouse, lib, "RGFW_loadMouse")
-	purego.RegisterLibFunc(&rgfwCreateWindow, lib, "RGFW_createWindow")
-	purego.RegisterLibFunc(&rgfwWindowMakeCurrent, lib, "RGFW_window_makeCurrent")
-	purego.RegisterLibFunc(&rgfwWindowSetIcon, lib, "RGFW_window_setIcon")
-	purego.RegisterLibFunc(&rgfwWindowSetMouseStandard, lib, "RGFW_window_setMouseStandard")
-	purego.RegisterLibFunc(&rgfwWindowShouldClose, lib, "RGFW_window_shouldClose")
-	purego.RegisterLibFunc(&rgfwWindowCheckEvent, lib, "RGFW_window_checkEvent")
-	purego.RegisterLibFunc(&rgfwWindowSetShouldClose, lib, "RGFW_window_setShouldClose")
-	purego.RegisterLibFunc(&rgfwIsReleased, lib, "RGFW_isReleased")
-	purego.RegisterLibFunc(&rgfwWindowSetMouseDefault, lib, "RGFW_window_setMouseDefault")
-	purego.RegisterLibFunc(&rgfwWindowSetMouse, lib, "RGFW_window_setMouse")
-	purego.RegisterLibFunc(&rgfwWindowShowMouse, lib, "RGFW_window_showMouse")
-	purego.RegisterLibFunc(&rgfwWriteClipboard, lib, "RGFW_writeClipboard")
-	purego.RegisterLibFunc(&rgfwReadClipboard, lib, "RGFW_readClipboard")
-	purego.RegisterLibFunc(&rgfwWindowSwapBuffers, lib, "RGFW_window_swapBuffers")
-	purego.RegisterLibFunc(&rgfwFreeMouse, lib, "RGFW_freeMouse")
-	purego.RegisterLibFunc(&rgfwWindowClose, lib, "RGFW_window_close")
-
-	purego.RegisterLibFunc(&rgfwGetTime, lib, "RGFW_getTime")
-	purego.RegisterLibFunc(&rgfwCheckFPS, lib, "RGFW_checkFPS")
-
-	purego.RegisterLibFunc(&rgfwSetMouseNotifyCallback, lib, "RGFW_setMouseNotifyCallback")
 }
 
 // ToBytePtr converts a Go string to a null-terminated C-style string by just appending a null byte,

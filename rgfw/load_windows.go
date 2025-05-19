@@ -1,22 +1,22 @@
 package rgfw
 
 import (
-	"fmt"
 	"syscall"
 )
 
-func Load(name string) (uintptr, error) {
+func libraryPath() string {
+	return "NGFW.dll"
+}
+
+func loadLibrary(name string) (uintptr, error) {
 	handle, err := syscall.LoadLibrary(name)
-	if err != nil {
-		err = fmt.Errorf("%s: error loading library: %w", name, err)
-	}
 	return uintptr(handle), err
 }
 
-func Get(lib uintptr, name string) uintptr {
-	addr, err := syscall.GetProcAddress(syscall.Handle(lib), name)
+func loadSymbol(lib uintptr, name string) uintptr {
+	ptr, err := syscall.GetProcAddress(syscall.Handle(lib), name)
 	if err != nil {
-		panic(err)
+		panic("rgfw: failed to load symbol " + name + ": " + err.Error())
 	}
-	return addr
+	return ptr
 }

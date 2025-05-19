@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"runtime"
 
 	"github.com/millken/go/rgfw"
+	_ "github.com/millken/go/rgfw/embedded"
 )
 
 var icon = [4 * 3 * 3]uint8{
@@ -20,7 +20,7 @@ var icon = [4 * 3 * 3]uint8{
 }
 
 func main() {
-	runtime.LockOSThread()
+	// os.Setenv("RGFW_PATH", "/Users/millken/github.com/millken/go/rgfw/RGFW/")
 	rgfw.SetClassName("RGFW Example")
 	win := rgfw.CreateWindow("RGFW Example Window", rgfw.Rect{X: 500, Y: 500, W: 500, H: 500}, rgfw.WindowCenter|rgfw.WindowAllowDND)
 	rgfw.SetMouseNotify(func(win *rgfw.Window, point rgfw.Point, status bool) {
