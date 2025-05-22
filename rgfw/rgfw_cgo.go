@@ -191,6 +191,11 @@ func (w *Window) SwapBuffers() {
 	C.RGFW_window_swapBuffers(w.ptr)
 }
 
+// RGFWDEF void RGFW_window_swapInterval(RGFW_window* win, i32 interval);
+func (w *Window) SwapInterval(interval int32) {
+	C.RGFW_window_swapInterval(w.ptr, C.i32(interval))
+}
+
 func (w *Window) PollEvent() *Event {
 	// RGFW_event* RGFW_window_pollEvent(RGFW_window* win);
 	eventPtr := C.RGFW_window_checkEvent(w.ptr)

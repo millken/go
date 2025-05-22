@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/millken/go/rgfw"
 )
 
@@ -28,6 +29,14 @@ func main() {
 	win.SetIcon(icon[:], rgfw.Area{3, 3}, 4)
 	win.SetMouseStandard(rgfw.MouseResizeNESW)
 	mouse := rgfw.LoadMouse(icon[:], rgfw.Area{3, 3}, 4)
+	// 初始化 OpenGL 绑定
+	if err := gl.Init(); err != nil {
+		panic(err)
+	}
+
+	win.SwapInterval(1)
+	fmt.Printf("OpenGL Version: %s\n", gl.GoStr(gl.GetString(gl.VERSION)))
+	fmt.Printf("OpenGL Vendor: %s\n", gl.GoStr(gl.GetString(gl.VENDOR)))
 	frames := uint32(0)
 	fps := uint32(0)
 	startTime := rgfw.GetTime()
@@ -70,6 +79,18 @@ func main() {
 			}
 
 		}
+
+		gl.ClearColor(1.0, 1.0, 1.0, 1.0)
+		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+		gl.Begin(gl.TRIANGLES)
+		gl.Color3f(1.0, 0.0, 0.0)
+		gl.Vertex2f(-0.6, -0.75)
+		gl.Color3f(0.0, 1.0, 0.0)
+		gl.Vertex2f(0.6, -0.75)
+		gl.Color3f(0.0, 0.0, 1.0)
+		gl.Vertex2f(0.0, 0.75)
+		gl.End()
 		win.SwapBuffers()
 		fps = rgfw.CheckFPS(startTime, frames, 60)
 		frames++
