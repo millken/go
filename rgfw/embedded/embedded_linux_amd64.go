@@ -4,5 +4,5 @@ import _ "embed"
 
 const name = "libRGFW.so"
 
-//go:embed linux_amd64/libRGFW.so
+//go:embed libRGFW_linux_amd64.so
 var lib []byte

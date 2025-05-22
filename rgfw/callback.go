@@ -1,3 +1,5 @@
+//go:build purego
+
 package rgfw
 
 import (
@@ -15,5 +17,5 @@ func SetMouseNotify(callback func(win *Window, point Point, status bool)) {
 		return 0
 	})
 
-	rgfwSetMouseNotifyCallback(MouseNotifyCallback(cb))
+	rgfwSetMouseNotifyCallback(cb)
 }

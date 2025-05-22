@@ -7,35 +7,40 @@ import (
 	"runtime"
 )
 
-func init() {
+func Init() error {
+	if os.Getenv("RGFW_PATH") != "" {
+		return nil
+	}
+
 	dir := filepath.Join(os.TempDir(), "RGFW")
 	file := filepath.Join(dir, name)
 
 	if fi, err := os.Stat(file); err == nil {
 		if fi.Size() != int64(len(lib)) {
 			if err := os.Remove(file); err != nil {
-				panic(err)
+				return err
 			}
 			if err := os.WriteFile(file, lib, os.ModePerm); err != nil { //nolint:gosec
-				panic(err)
+				return err
 			}
 		}
 	} else {
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil { //nolint:gosec
-			panic(err)
+			return err
 		}
 		if err := os.WriteFile(file, lib, os.ModePerm); err != nil { //nolint:gosec
-			panic(err)
+			return err
 		}
 	}
 
 	if runtime.GOOS == "windows" {
 		if err := os.Setenv("PATH", dir+";"+os.Getenv("PATH")); err != nil {
-			panic(err)
+			return err
 		}
 	} else {
 		if err := os.Setenv("RGFW_PATH", dir); err != nil {
-			panic(err)
+			return err
 		}
 	}
+	return nil
 }

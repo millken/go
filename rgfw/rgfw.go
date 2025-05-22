@@ -1,6 +1,8 @@
+//go:build purego
+// +build purego
+
 package rgfw
 
-import "C"
 import (
 	"runtime"
 	"strings"
@@ -8,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/ebitengine/purego"
+	"github.com/millken/go/rgfw/embedded"
 )
 
 type Point struct {
@@ -22,13 +25,33 @@ type Rect struct {
 	H int32
 }
 
+// 修改cRect结构体确保与C语言定义的RGFW_rect完全匹配
+type cRect struct {
+	x int32
+	y int32
+	w int32
+	h int32
+}
+
+func (r *Rect) toC() *cRect {
+	if r == nil {
+		return nil
+	}
+	return &cRect{
+		x: r.X,
+		y: r.Y,
+		w: r.W,
+		h: r.H,
+	}
+}
+
 type Area struct {
 	W uint32
 	H uint32
 }
 
 type Monitor struct {
-	Name   *C.char
+	Name   string
 	Rect   Rect
 	ScaleX float32
 	ScaleY float32
@@ -119,7 +142,7 @@ func (w *Window) MakeCurrent() {
 }
 
 func (w *Window) SetIcon(icon []byte, area Area, channels int32) bool {
-	return rgfwWindowSetIcon(w, (*byte)(&icon[0]), area, channels)
+	return rgfwWindowSetIcon(w, (*byte)(&icon[0]), &area, channels)
 }
 
 func (w *Window) SetMouseStandard(mouse MouseIcon) bool {
@@ -194,324 +217,28 @@ func (w *Window) ShowMouse(show bool) {
 	rgfwWindowShowMouse(w, toBool(show))
 }
 
-type WindowFlags uint32
-
-const (
-	WindowNoInitAPI       WindowFlags = 1 << 0  // do NOT init an API (including the software rendering buffer)
-	WindowNoBorder        WindowFlags = 1 << 1  // the window doesn't have a border
-	WindowNoResize        WindowFlags = 1 << 2  // the window cannot be resized by the user
-	WindowAllowDND        WindowFlags = 1 << 3  // the window supports drag and drop
-	WindowHideMouse       WindowFlags = 1 << 4  // the window should hide the mouse
-	WindowFullscreen      WindowFlags = 1 << 5  // the window is fullscreen by default
-	WindowTransparent     WindowFlags = 1 << 6  // the window is transparent
-	WindowCenter          WindowFlags = 1 << 7  // center the window on the screen
-	WindowOpenglSoftware  WindowFlags = 1 << 8  // use OpenGL software rendering
-	WindowCocoaCHDirToRes WindowFlags = 1 << 9  // (cocoa only), change directory to resource folder
-	WindowScaleToMonitor  WindowFlags = 1 << 10 // scale the window to the screen
-	WindowHide            WindowFlags = 1 << 11 // the window is hidden
-	WindowMaximize        WindowFlags = 1 << 12
-	WindowCenterCursor    WindowFlags = 1 << 13
-	WindowFloating        WindowFlags = 1 << 14 // create a floating window
-	WindowFreeOnClose     WindowFlags = 1 << 15 // free the window struct when the window is closed
-	WindowFocusOnShow     WindowFlags = 1 << 16 // focus the window when it's shown
-	WindowMinimize        WindowFlags = 1 << 17 // minimize the window
-	WindowFocus           WindowFlags = 1 << 18 // if the window is in focus
-
-	WindowedFullscreen WindowFlags = WindowNoBorder | WindowMaximize
-)
-
-type MouseIcon uint8
-
-const (
-	MouseNormal MouseIcon = iota
-	MouseArrow
-	MouseIbeam
-	MouseCrosshair
-	MousePointingHand
-	MouseResizeEW
-	MouseResizeNS
-	MouseResizeNWSE
-	MouseResizeNESW
-	MouseResizeAll
-	MouseNotAllowed
-	// 11~15 are unused, for alignment
-	MouseIconFinal MouseIcon = 16 // padding for alignment
-)
-
-// EventType represents the type of an event.
-type EventType uint8
-
-func (e EventType) String() string {
-	switch e {
-	case EventNone:
-		return "EventNone"
-	case EventKeyPressed:
-		return "EventKeyPressed"
-	case EventKeyReleased:
-		return "EventKeyReleased"
-	case EventMouseButtonPressed:
-		return "EventMouseButtonPressed"
-	case EventMouseButtonReleased:
-		return "EventMouseButtonReleased"
-	case EventMousePosChanged:
-		return "EventMousePosChanged"
-	case EventGamepadConnected:
-		return "EventGamepadConnected"
-	case EventGamepadDisconnected:
-		return "EventGamepadDisconnected"
-	case EventGamepadButtonPressed:
-		return "EventGamepadButtonPressed"
-	case EventGamepadButtonReleased:
-		return "EventGamepadButtonReleased"
-	case EventGamepadAxisMove:
-		return "EventGamepadAxisMove"
-	case EventWindowMoved:
-		return "EventWindowMoved"
-	case EventWindowResized:
-		return "EventWindowResized"
-	case EventFocusIn:
-		return "EventFocusIn"
-	case EventFocusOut:
-		return "EventFocusOut"
-	case EventMouseEnter:
-		return "EventMouseEnter"
-	case EventMouseLeave:
-		return "EventMouseLeave"
-	case EventWindowRefresh:
-		return "EventWindowRefresh"
-	case EventQuit:
-		return "EventQuit"
-	case EventDND:
-		return "EventDND"
-	case EventDNDInit:
-		return "EventDNDInit"
-	case EventWindowMaximized:
-		return "EventWindowMaximized"
-	case EventWindowMinimized:
-		return "EventWindowMinimized"
-	case EventWindowRestored:
-		return "EventWindowRestored"
-	default:
-	}
-	panic("unknown event type")
-}
-
-const (
-	EventNone EventType = iota // no event has been sent
-
-	// Key events
-	EventKeyPressed  // a key has been pressed
-	EventKeyReleased // a key has been released
-	/*
-	   key event note:
-	   - the code of the key pressed is stored in Event.key
-	   - string version is stored in Event.KeyString
-	   - Event.keyMod holds the current keyMod (CapsLock, NumLock, etc.)
-	*/
-
-	// Mouse events
-	EventMouseButtonPressed  // a mouse button has been pressed (left, middle, right)
-	EventMouseButtonReleased // a mouse button has been released (left, middle, right)
-	EventMousePosChanged     // the position of the mouse has been changed
-	/*
-	   mouse event note:
-	   - x and y of the mouse can be found in Event.point
-	   - Event.button holds which mouse button was pressed
-	*/
-
-	// Gamepad events
-	EventGamepadConnected      // a gamepad was connected
-	EventGamepadDisconnected   // a gamepad was disconnected
-	EventGamepadButtonPressed  // a gamepad button was pressed
-	EventGamepadButtonReleased // a gamepad button was released
-	EventGamepadAxisMove       // an axis of a gamepad was moved
-	/*
-	   gamepad event note:
-	   - Event.gamepad holds which gamepad was altered, if any
-	   - Event.button holds which gamepad button was pressed
-	   - Event.axis holds the data of all the axes
-	   - Event.axisesCount says how many axes there are
-	*/
-
-	// Window events
-	EventWindowMoved   // the window was moved (by the user)
-	EventWindowResized // the window was resized (by the user), [on WASM this means the browser was resized]
-	EventFocusIn       // window is in focus now
-	EventFocusOut      // window is out of focus now
-	EventMouseEnter    // mouse entered the window
-	EventMouseLeave    // mouse left the window
-	EventWindowRefresh // The window content needs to be refreshed
-
-	/*
-	   attribs change event note:
-	   - The event data is sent straight to the window structure
-	   - win.r.x, win.r.y, win.r.w and win.r.h
-	*/
-
-	EventQuit // the user clicked the quit button
-
-	// Drag and Drop events
-	EventDND     // a file has been dropped into the window
-	EventDNDInit // the start of a dnd event, when the place where the file drop is known
-	/*
-	   dnd data note:
-	   - x and y coords of the drop are stored in Event.point
-	   - Event.droppedFilesCount holds how many files were dropped
-	   - This is also the size of the array which stores all the dropped file strings, Event.droppedFiles
-	*/
-
-	// Window state events
-	EventWindowMaximized // the window was maximized
-	EventWindowMinimized // the window was minimized
-	EventWindowRestored  // the window was restored
-	EventScaleUpdated    // content scale factor changed
-)
-
-type KeyMod uint8
-
-const (
-	KeyModCapsLock   KeyMod = 1 << 0
-	KeyModNumLock    KeyMod = 1 << 1
-	KeyModControl    KeyMod = 1 << 2
-	KeyModAlt        KeyMod = 1 << 3
-	KeyModShift      KeyMod = 1 << 4
-	KeyModSuper      KeyMod = 1 << 5
-	KeyModScrollLock KeyMod = 1 << 6
-)
-
-type Key uint8
-
-const (
-	KeyNULL     Key = 0
-	KeyEscape   Key = '\033'
-	KeyBacktick Key = '`'
-	Key0        Key = '0'
-	Key1        Key = '1'
-	Key2        Key = '2'
-	Key3        Key = '3'
-	Key4        Key = '4'
-	Key5        Key = '5'
-	Key6        Key = '6'
-	Key7        Key = '7'
-	Key8        Key = '8'
-	Key9        Key = '9'
-
-	KeyMinus     Key = '-'
-	KeyEquals    Key = '='
-	KeyBackSpace Key = '\b'
-	KeyTab       Key = '\t'
-	KeySpace     Key = ' '
-
-	KeyA Key = 'a'
-	KeyB Key = 'b'
-	KeyC Key = 'c'
-	KeyD Key = 'd'
-	KeyE Key = 'e'
-	KeyF Key = 'f'
-	KeyG Key = 'g'
-	KeyH Key = 'h'
-	KeyI Key = 'i'
-	KeyJ Key = 'j'
-	KeyK Key = 'k'
-	KeyL Key = 'l'
-	KeyM Key = 'm'
-	KeyN Key = 'n'
-	KeyO Key = 'o'
-	KeyP Key = 'p'
-	KeyQ Key = 'q'
-	KeyR Key = 'r'
-	KeyS Key = 's'
-	KeyT Key = 't'
-	KeyU Key = 'u'
-	KeyV Key = 'v'
-	KeyW Key = 'w'
-	KeyX Key = 'x'
-	KeyY Key = 'y'
-	KeyZ Key = 'z'
-
-	KeyPeriod       Key = '.'
-	KeyComma        Key = ','
-	KeySlash        Key = '/'
-	KeyBracket      Key = '{'
-	KeyCloseBracket Key = '}'
-	KeySemicolon    Key = ';'
-	KeyApostrophe   Key = '\''
-	KeyBackSlash    Key = '\\'
-	KeyReturn       Key = '\n'
-
-	KeyDelete Key = 127 // '\177'
-)
-const (
-	// 自动递增部分，起始值需大于127
-	KeyF1 Key = iota + 128
-	KeyF2
-	KeyF3
-	KeyF4
-	KeyF5
-	KeyF6
-	KeyF7
-	KeyF8
-	KeyF9
-	KeyF10
-	KeyF11
-	KeyF12
-
-	KeyCapsLock
-	KeyShiftL
-	KeyControlL
-	KeyAltL
-	KeySuperL
-	KeyShiftR
-	KeyControlR
-	KeyAltR
-	KeySuperR
-	KeyUp
-	KeyDown
-	KeyLeft
-	KeyRight
-	KeyInsert
-	KeyEnd
-	KeyHome
-	KeyPageUp
-	KeyPageDown
-
-	KeyNumLock
-	KeyKP_Slash
-	KeyMultiply
-	KeyKP_Minus
-	KeyKP_1
-	KeyKP_2
-	KeyKP_3
-	KeyKP_4
-	KeyKP_5
-	KeyKP_6
-	KeyKP_7
-	KeyKP_8
-	KeyKP_9
-	KeyKP_0
-	KeyKP_Period
-	KeyKP_Return
-	KeyScrollLock
-
-	KeyLast = 256
-)
-
 // Global once to load native library symbols.
 var loadOnce sync.Once
 var (
 	//RGFWDEF void RGFW_setClassName(const char* name);
 	rgfwSetClassName func(*byte)
-	rgfwCreateWindow func(string, Rect, WindowFlags) *Window
+	// RGFWDEF RGFW_window* RGFW_createWindow(
+	// 	const char* name, /* name of the window */
+	// 	RGFW_rect rect, /* rect of window */
+	// 	RGFW_windowFlags flags /* extra arguments ((u32)0 means no flags used)*/
+	// ); /*!< function to create a window and struct */
+
+	rgfwCreateWindow func(uintptr, uintptr, WindowFlags) uintptr
 	//RGFWDEF void RGFW_window_makeCurrent(RGFW_window* win);
 	rgfwWindowMakeCurrent func(*Window)
 	//RGFWDEF RGFW_mouse* RGFW_loadMouse(u8* icon, RGFW_area a, i32 channels);
-	rgfwLoadMouse func(*byte, Area, int32) *Mouse
+	rgfwLoadMouse func(*byte, *Area, int32) *Mouse
 	// RGFWDEF RGFW_bool RGFW_window_setIcon(RGFW_window* win, /*!< source window */
 	// 	u8* icon /*!< icon bitmap */,
 	// 	RGFW_area a /*!< width and height of the bitmap */,
 	// 	i32 channels /*!< how many channels the bitmap has (rgb : 3, rgba : 4) */
 	// ); /*!< image MAY be resized by default, set both the taskbar and window icon */
-	rgfwWindowSetIcon func(*Window, *byte, Area, int32) bool
+	rgfwWindowSetIcon func(*Window, *byte, *Area, int32) bool
 	//RGFWDEF	RGFW_bool RGFW_window_setMouseStandard(RGFW_window* win, u8 mouse);
 	rgfwWindowSetMouseStandard func(*Window, MouseIcon) bool
 	//RGFWDEF RGFW_bool RGFW_window_shouldClose(RGFW_window* win);
@@ -548,27 +275,32 @@ var (
 		CallBack
 	*/
 	//RGFWDEF RGFW_mouseNotifyfunc RGFW_setMouseNotifyCallback(RGFW_mouseNotifyfunc func);
-	rgfwSetMouseNotifyCallback func(MouseNotifyCallback) // RGFWDEF void RGFW_setMouseNotifyCallback(RGFW_mouseNotifyCallback callback);
+	rgfwSetMouseNotifyCallback func(uintptr) uintptr // 修改为使用 uintptr 而不是结构体
+
+	// 添加 MouseNotifyCallback 类型的定义
 )
 
 func SetClassName(name string) {
 	if len(name) == 0 {
 		return
 	}
-	loadOnce.Do(func() { registerLibFunc() })
-	rgfwSetClassName((*byte)(ToBytePtr(name)))
+
+	cStr, ptr := cString(name)
+	purego.SyscallN(pSetClassName, ptr)
+	runtime.KeepAlive(cStr)
+
 }
 
 func SetClipboard(text string) {
 	if len(text) == 0 {
 		return
 	}
-	loadOnce.Do(func() { registerLibFunc() })
+
 	rgfwWriteClipboard((*byte)(ToBytePtr(text)), uint32(len(text)+1))
 }
 
 func GetClipboard() string {
-	loadOnce.Do(func() { registerLibFunc() })
+
 	ptr := rgfwReadClipboard(nil)
 	if ptr == nil {
 		return ""
@@ -577,60 +309,84 @@ func GetClipboard() string {
 }
 
 func LoadMouse(icon []byte, area Area, channels int32) *Mouse {
-	loadOnce.Do(func() { registerLibFunc() })
-	return rgfwLoadMouse((*byte)(&icon[0]), area, channels)
+	return rgfwLoadMouse((*byte)(&icon[0]), &area, channels)
 }
 
 func GetTime() float64 {
-	loadOnce.Do(func() { registerLibFunc() })
 	return rgfwGetTime()
 }
 func CheckFPS(startTime float64, frameCount uint32, fpsCap uint32) uint32 {
-	loadOnce.Do(func() { registerLibFunc() })
 	return rgfwCheckFPS(startTime, frameCount, fpsCap)
 }
 
 func CreateWindow(title string, r Rect, flags WindowFlags) *Window {
-	loadOnce.Do(func() { registerLibFunc() })
-	return rgfwCreateWindow(title, r, flags)
+	// 确保矩形的宽度和高度不为零
+	if r.W <= 0 {
+		r.W = 640 // 默认宽度
+	}
+	if r.H <= 0 {
+		r.H = 480 // 默认高度
+	}
+
+	// 分配在堆上的内存，不会被移动
+	rectCopy := r.toC() // 创建副本，避免修改原始结构
+
+	// 创建一个长生命周期的字符串
+	cStr, ptr := cString(title)
+
+	// 创建一个引用数组，防止GC回收
+	refs := []interface{}{cStr, rectCopy}
+	runtime.KeepAlive(refs)
+
+	r1, _, r3 := purego.SyscallN(pCreate, ptr, uintptr(unsafe.Pointer(rectCopy)), uintptr(flags))
+	if r3 == 0 {
+		panic("rgfw: failed to create window")
+	}
+	return (*Window)(unsafe.Pointer(r1))
 }
 
-func registerLibFunc() {
-	libHandle, err := loadLibrary(libraryPath())
-	if err != nil {
-		panic("rgfw: failed to load native library: " + err.Error())
-	}
-	if libHandle == 0 {
-		panic("rgfw: native library not loaded")
-	}
-	purego.RegisterLibFunc(&rgfwSetClassName, libHandle, "RGFW_setClassName")
-	purego.RegisterLibFunc(&rgfwLoadMouse, libHandle, "RGFW_loadMouse")
-	purego.RegisterLibFunc(&rgfwCreateWindow, libHandle, "RGFW_createWindow")
-	purego.RegisterLibFunc(&rgfwWindowMakeCurrent, libHandle, "RGFW_window_makeCurrent")
-	purego.RegisterLibFunc(&rgfwWindowSetIcon, libHandle, "RGFW_window_setIcon")
-	purego.RegisterLibFunc(&rgfwWindowSetMouseStandard, libHandle, "RGFW_window_setMouseStandard")
-	purego.RegisterLibFunc(&rgfwWindowShouldClose, libHandle, "RGFW_window_shouldClose")
-	purego.RegisterLibFunc(&rgfwWindowCheckEvent, libHandle, "RGFW_window_checkEvent")
-	purego.RegisterLibFunc(&rgfwWindowSetShouldClose, libHandle, "RGFW_window_setShouldClose")
-	purego.RegisterLibFunc(&rgfwIsReleased, libHandle, "RGFW_isReleased")
-	purego.RegisterLibFunc(&rgfwWindowSetMouseDefault, libHandle, "RGFW_window_setMouseDefault")
-	purego.RegisterLibFunc(&rgfwWindowSetMouse, libHandle, "RGFW_window_setMouse")
-	purego.RegisterLibFunc(&rgfwWindowShowMouse, libHandle, "RGFW_window_showMouse")
-	purego.RegisterLibFunc(&rgfwWriteClipboard, libHandle, "RGFW_writeClipboard")
-	purego.RegisterLibFunc(&rgfwReadClipboard, libHandle, "RGFW_readClipboard")
-	purego.RegisterLibFunc(&rgfwWindowSwapBuffers, libHandle, "RGFW_window_swapBuffers")
-	purego.RegisterLibFunc(&rgfwFreeMouse, libHandle, "RGFW_freeMouse")
-	purego.RegisterLibFunc(&rgfwWindowClose, libHandle, "RGFW_window_close")
-
-	purego.RegisterLibFunc(&rgfwGetTime, libHandle, "RGFW_getTime")
-	purego.RegisterLibFunc(&rgfwCheckFPS, libHandle, "RGFW_checkFPS")
-
-	purego.RegisterLibFunc(&rgfwSetMouseNotifyCallback, libHandle, "RGFW_setMouseNotifyCallback")
-}
+var (
+	pCreate, pSetClassName uintptr
+)
 
 func init() {
-	runtime.LockOSThread()
+	loadOnce.Do(func() {
+		if err := embedded.Init(); err != nil {
+			panic("rgfw: failed to initialize embedded resources: " + err.Error())
+		}
+		libHandle, err := loadLibrary(libraryPath())
+		if err != nil {
+			panic("rgfw: failed to load native library: " + err.Error())
+		}
+		if libHandle == 0 {
+			panic("rgfw: native library not loaded")
+		}
+		pCreate = loadSymbol(libHandle, "RGFW_createWindow")
+		pSetClassName = loadSymbol(libHandle, "RGFW_setClassName")
+		// purego.RegisterLibFunc(&rgfwSetClassName, libHandle, "RGFW_setClassName")
+		// purego.RegisterLibFunc(&rgfwLoadMouse, libHandle, "RGFW_loadMouse")
+		// purego.RegisterLibFunc(&rgfwCreateWindow, libHandle, "RGFW_createWindow")
+		// purego.RegisterLibFunc(&rgfwWindowMakeCurrent, libHandle, "RGFW_window_makeCurrent")
+		// purego.RegisterLibFunc(&rgfwWindowSetIcon, libHandle, "RGFW_window_setIcon")
+		// purego.RegisterLibFunc(&rgfwWindowSetMouseStandard, libHandle, "RGFW_window_setMouseStandard")
+		// purego.RegisterLibFunc(&rgfwWindowShouldClose, libHandle, "RGFW_window_shouldClose")
+		// purego.RegisterLibFunc(&rgfwWindowCheckEvent, libHandle, "RGFW_window_checkEvent")
+		// purego.RegisterLibFunc(&rgfwWindowSetShouldClose, libHandle, "RGFW_window_setShouldClose")
+		// purego.RegisterLibFunc(&rgfwIsReleased, libHandle, "RGFW_isReleased")
+		// purego.RegisterLibFunc(&rgfwWindowSetMouseDefault, libHandle, "RGFW_window_setMouseDefault")
+		// purego.RegisterLibFunc(&rgfwWindowSetMouse, libHandle, "RGFW_window_setMouse")
+		// purego.RegisterLibFunc(&rgfwWindowShowMouse, libHandle, "RGFW_window_showMouse")
+		// purego.RegisterLibFunc(&rgfwWriteClipboard, libHandle, "RGFW_writeClipboard")
+		// purego.RegisterLibFunc(&rgfwReadClipboard, libHandle, "RGFW_readClipboard")
+		// purego.RegisterLibFunc(&rgfwWindowSwapBuffers, libHandle, "RGFW_window_swapBuffers")
+		// purego.RegisterLibFunc(&rgfwFreeMouse, libHandle, "RGFW_freeMouse")
+		// purego.RegisterLibFunc(&rgfwWindowClose, libHandle, "RGFW_window_close")
 
+		// purego.RegisterLibFunc(&rgfwGetTime, libHandle, "RGFW_getTime")
+		// purego.RegisterLibFunc(&rgfwCheckFPS, libHandle, "RGFW_checkFPS")
+
+		// purego.RegisterLibFunc(&rgfwSetMouseNotifyCallback, libHandle, "RGFW_setMouseNotifyCallback")
+	})
 }
 
 // ToBytePtr converts a Go string to a null-terminated C-style string by just appending a null byte,
@@ -644,6 +400,19 @@ func ToBytePtr(s string) *byte {
 	result := make([]byte, size)
 	copy(result, s)
 	return &result[0]
+}
+
+func cString(s string) ([]byte, uintptr) {
+	if s == "" {
+		empty := []byte{0}
+		return empty, uintptr(unsafe.Pointer(&empty[0]))
+	}
+
+	bytes := make([]byte, len(s)+1)
+	copy(bytes, s)
+	bytes[len(s)] = 0 // 确保以null结尾
+
+	return bytes, uintptr(unsafe.Pointer(&bytes[0]))
 }
 
 // ToString converts a null-terminated C-style string into a Go string.
