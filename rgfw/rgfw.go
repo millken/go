@@ -349,7 +349,7 @@ var (
 	pCreate, pSetClassName uintptr
 )
 
-func init() {
+func init1() {
 	loadOnce.Do(func() {
 		if err := embedded.Init(); err != nil {
 			panic("rgfw: failed to initialize embedded resources: " + err.Error())

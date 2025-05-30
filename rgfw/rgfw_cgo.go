@@ -4,9 +4,10 @@
 package rgfw
 
 /*
- #cgo LDFLAGS: -L. -lRGFW
-#cgo CFLAGS:  -Wno-unused-function -Wno-implicit-function-declaration -I.
+ #cgo CFLAGS:  -Wno-unused-function -Wno-implicit-function-declaration -I.
  #cgo linux LDFLAGS: -ldl -lpthread -lX11 -lXrandr -lGL
+ #cgo darwin,arm64 LDFLAGS: -mmacosx-version-min=11.0 -framework CoreVideo -framework Cocoa -framework OpenGL -framework IOKit -L${SRCDIR}/_libs/ -lRGFW_darwin_arm64
+
  #include <RGFW.h>
 
 extern void goMouseCallback(RGFW_window* win, RGFW_point point, RGFW_bool status);
@@ -157,18 +158,12 @@ func (w *Window) IsRelease(key Key) bool {
 
 // RGFWDEF RGFW_bool RGFW_window_setMouseDefault(RGFW_window* win);
 func (w *Window) SetMouseDefault() bool {
-	if C.RGFW_window_setMouseDefault(w.ptr) != 0 {
-		return true
-	}
-	return false
+	return C.RGFW_window_setMouseDefault(w.ptr) != 0
 }
 
 // RGFWDEF	RGFW_bool RGFW_window_setMouseStandard(RGFW_window* win, u8 mouse);
 func (w *Window) SetMouseStandard(mouse MouseIcon) bool {
-	if C.RGFW_window_setMouseStandard(w.ptr, C.u8(mouse)) != 0 {
-		return true
-	}
-	return false
+	return C.RGFW_window_setMouseStandard(w.ptr, C.u8(mouse)) != 0
 }
 
 // RGFWDEF void RGFW_window_setMouse(RGFW_window* win, RGFW_mouse* mouse);

@@ -1,3 +1,9 @@
 [submodule "rgfw/RGFW"]
 	path = rgfw/RGFW
 	url = https://github.com/ColleagueRiley/RGFW
+[submodule "nanovg/src"]
+	path = nanovg/src
+	url = https://github.com/styluslabs/nanovgXC
+[submodule "nanovg/nanovgXC"]
+	path = nanovg/nanovgXC
+	url = https://github.com/styluslabs/nanovgXC

@@ -5,6 +5,13 @@ libRGFW_arm64.dylib:
 	clang  -shared -arch arm64 RGFW.o -framework CoreVideo -framework Cocoa -framework OpenGL -framework IOKit -std=c99 -o libRGFW_darwin_arm64.dylib
 	rm RGFW.o
 
+libRGFW_arm64.a:
+	cp ../RGFW/RGFW.h RGFW.c
+	clang -c RGFW.c -arch arm64 -D RGFW_IMPLEMENTATION -fPIC -D RGFW_EXPORT -std=c99 -o RGFW_darwin_arm64.o
+	rm RGFW.c
+	ar rcs libRGFW_darwin_arm64.a RGFW_darwin_arm64.o
+	rm RGFW_darwin_arm64.o
+
 libRGFW_amd64.dylib:
 	cp ../RGFW/RGFW.h RGFW.c
 	clang  -c RGFW.c  -arch x86_64 -D RGFW_IMPLEMENTATION -fPIC -D RGFW_EXPORT

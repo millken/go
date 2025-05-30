@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+
+  <defs>
+    <!-- these should be <symbol>s once we move viewBox logic to SvgViewportNode -->
+    <svg id="chevron-left" width="96" height="96" viewBox="0 0 96 96">
+      <polygon points="57.879,18.277 32.223,47.998 57.879,77.723 63.776,72.634 42.512,47.998 63.776,23.372"/>
+    </svg>
+
+    <svg id="chevron-down" width="96" height="96" viewBox="0 0 96 96">
+      <polygon points="72.628,32.223 48.002,53.488 23.366,32.223 18.278,38.121 48.002,63.777 77.722,38.121"/>
+    </svg>
+
+    <svg id="chevron-right" width="96" height="96" viewBox="0 0 96 96">
+      <polygon points="32.223,23.372 53.488,47.998 32.223,72.634 38.121,77.723 63.777,47.998 38.121,18.277"/>
+    </svg>
+  </defs>
+
+  <g id="menu" class="menu" display="none" position="absolute" box-anchor="fill" layout="box">
+    <rect class="background menu-bg" box-anchor="fill" width="20" height="20"/>
+    <g class="child-container" box-anchor="fill" layout="flex" flex-direction="column">
+    </g>
+  </g>
+
+  <!-- thin space between menu items acts as separator, so we don't want class=background on menu item BG -->
+  <g id="menuitem-standard" class="menuitem" box-anchor="fill" margin="1 0" layout="box">
+    <rect class="menuitem-bg" box-anchor="hfill" width="150" height="36"/>
+    <g box-anchor="left vfill" layout="flex" flex-direction="row">
+      <g class="menu-icon-container" layout="box" margin="0 2">
+        <!-- invisible rectangle is to fix size even if no icon -->
+        <rect fill="none" width="36" height="36"/>
+        <use display="none" class="icon" width="36" height="36" xlink:href=""/>
+      </g>
+      <text class="title" margin="0 12"></text>
+    </g>
+  </g>
+
+  <g id="menuitem-submenu" class="menuitem" box-anchor="fill" margin="1 0" layout="box">
+    <rect class="menuitem-bg" box-anchor="hfill" width="150" height="36"/>
+    <g box-anchor="fill" layout="flex" flex-direction="row">
+      <g class="menu-icon-container" layout="box" margin="0 2">
+        <rect fill="none" width="36" height="36"/>
+      </g>
+      <text class="title" margin="0 12"></text>
+      <rect class="stretch" box-anchor="fill" fill="none" width="20" height="20"/>
+      <use class="icon submenu-indicator" width="24" height="24" xlink:href="#chevron-right" />
+    </g>
+  </g>
+
+  <g id="menuitem-custom" class="menuitem" box-anchor="fill" margin="1 0" layout="box">
+    <rect class="menuitem-bg" box-anchor="hfill" width="150" height="36"/>
+    <g class="menuitem-container" box-anchor="fill" layout="box">
+    </g>
+  </g>
+
+  <g id="menu-separator" class="menu-separator" layout="box">
+    <rect box-anchor="hfill" width="36" height="9"/>
+    <rect class="separator" box-anchor="hfill" margin="0 4" width="26" height="6"/>
+  </g>
+
+  <g id="toolbar" class="toolbar" box-anchor="hfill" layout="box">
+    <rect class="toolbar-bg background" box-anchor="fill" width="20" height="20"/>
+    <g class="child-container" box-anchor="hfill" layout="flex" flex-direction="row">
+    </g>
+  </g>
+
+  <g id="vert-toolbar" class="toolbar vert-toolbar" box-anchor="vfill" layout="box">
+    <rect class="toolbar-bg background" box-anchor="fill" width="20" height="20"/>
+    <g class="child-container" box-anchor="vfill" layout="flex" flex-direction="column">
+    </g>
+  </g>
+
+  <!-- note that class=checkmark can be moved to the filling rect to color whole background when checked -->
+  <g id="toolbutton" class="toolbutton" layout="box">
+    <rect class="background" box-anchor="hfill" width="36" height="42"/>
+    <rect class="checkmark" box-anchor="bottom hfill" margin="0 2" fill="none" width="36" height="3"/>
+    <g margin="0 3" box-anchor="fill" layout="flex" flex-direction="row">
+      <use class="icon" width="36" height="36" xlink:href="" />
+      <text class="title" display="none" margin="0 9"></text>
+    </g>
+  </g>
+
+  <g id="toolbar-separator" class="toolbar-separator" box-anchor="vfill" layout="box">
+    <rect fill="none" box-anchor="vfill" width="16" height="36"/>
+    <rect class="separator" box-anchor="vfill" margin="4 0" width="2" height="36"/>
+  </g>
+
+  <g id="vert-toolbar-separator" class="toolbar-separator" box-anchor="hfill" layout="box">
+    <rect fill="none" box-anchor="hfill" width="36" height="16"/>
+    <rect class="separator" box-anchor="hfill" margin="0 4" width="36" height="2"/>
+  </g>
+
+  <g id="tooltip" class="tooltip" box-anchor="fill" layout="box">
+    <rect box-anchor="fill" stroke-width="0.5" stroke="#000" width="36" height="36"/>
+  </g>
+
+  <g id="pushbutton" class="pushbutton" box-anchor="fill" layout="box">
+    <rect class="background pushbtn-bg" box-anchor="hfill" width="36" height="36"/>  <!-- rx="8" ry="8" -->
+    <text class="title" margin="8 8"></text>
+  </g>
+
+  <g id="radiobutton" class="radiobutton checkbox">
+    <rect fill="none" width="26" height="26"/>
+    <circle fill="none" stroke="currentColor" stroke-width="1.5" cx="13" cy="13" r="8" />
+    <circle class="checkmark" fill="currentColor" cx="13" cy="13" r="5" />
+  </g>
+
+  <g id="checkbox" class="checkbox">
+    <rect fill="none" width="26" height="26"/>
+    <rect x="4" y="4" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5" width="18" height="18"/>
+    <g class="checkmark">
+      <rect x="3.25" y="3.25" fill="currentColor" width="19.5" height="19.5"/>
+      <path fill="none" stroke="white" stroke-width="12" transform="translate(3.25, 3.25) scale(0.20)" d="M15 45 L40 70 L85 25"/>
+    </g>
+  </g>
+
+  <g id="textedit" class="inputbox textbox" layout="box">
+    <!-- invisible rect to set minimum width -->
+    <rect class="min-width-rect" width="150" height="36" fill="none"/>
+    <rect class="inputbox-bg" box-anchor="fill" width="20" height="20"/>
+  </g>
+
+  <!-- non-editable textbox for combobox and spinbox -->
+  <g id="textbox" class="textbox" box-anchor="fill" layout="box">
+    <text box-anchor="left" margin="3 6"></text>
+  </g>
+
+  <g id="combobox" class="inputbox combobox" layout="box">
+    <rect class="min-width-rect" width="150" height="36" fill="none"/>
+    <rect class="inputbox-bg" box-anchor="fill" width="150" height="36"/>
+
+    <g class="combo_content" box-anchor="fill" layout="flex" flex-direction="row" margin="0 2">
+      <g class="textbox combo_text" box-anchor="fill" layout="box">
+      </g>
+
+      <g class="combo_open" box-anchor="vfill" layout="box">
+        <rect fill="none" box-anchor="vfill" width="28" height="28"/>
+        <use class="icon" width="28" height="28" xlink:href="#chevron-down" />
+      </g>
+    </g>
+
+    <g class="combo_menu menu" display="none" position="absolute" top="100%" left="0" box-anchor="fill" layout="box">
+      <!-- invisible rect to set minimum width; proper soln would be to support left=0 right=0 to stretch -->
+      <rect class="combo-menu-min-width" width="150" height="36" fill="none"/>
+      <rect class="background menu-bg" box-anchor="fill" width="20" height="20"/>
+      <g class="child-container" box-anchor="fill" layout="flex" flex-direction="column">
+        <g class="combo_proto comboitem" display="none" box-anchor="fill" layout="box">
+          <rect box-anchor="hfill" width="36" height="36"/>
+          <text box-anchor="left" margin="8 8">Prototype</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <g id="spinbox" class="inputbox spinbox" layout="box">
+    <rect class="min-width-rect" width="150" height="36" fill="none"/>
+    <rect class="inputbox-bg" box-anchor="fill" width="150" height="36"/>
+
+    <g class="spinbox_content" box-anchor="fill" layout="flex" flex-direction="row" margin="0 2">
+      <g class="textbox spinbox_text" box-anchor="fill" layout="box">
+      </g>
+
+      <!-- inc/dec buttons -->
+      <g class="toolbutton spinbox_dec" box-anchor="vfill" layout="box">
+        <rect class="background" width="28" height="28"/>
+        <use class="icon" width="28" height="28" xlink:href="#chevron-left" />
+      </g>
+      <g class="toolbutton spinbox_inc" box-anchor="vfill" layout="box">
+        <rect class="background" width="28" height="28"/>
+        <use class="icon" width="28" height="28" xlink:href="#chevron-right" />
+      </g>
+    </g>
+  </g>
+
+  <g id="slider" class="slider" box-anchor="hfill" layout="box">
+    <rect class="min-width-rect" width="150" height="28" fill="none"/>
+    <rect class="slider-bg background" box-anchor="hfill" width="200" height="28" margin="0 12"/>
+    <g class="slider-handle-container" box-anchor="left">
+      <!-- invisible rect to set left edge of box so slider-handle can move freely -->
+      <rect width="28" height="28" fill="none"/>
+      <g class="slider-handle" transform="translate(10,0)">
+        <rect class="slider-handle-outer" x="-12" y="-2" width="24" height="32"/>
+        <rect class="slider-handle-inner" x="-9" y="0" width="18" height="28"/>
+      </g>
+    </g>
+  </g>
+
+  <svg id="dialog" class="window dialog" display="none" layout="box">
+    <rect class="dialog-bg background" box-anchor="fill" width="20" height="20"/>
+    <g class="dialog-layout" box-anchor="fill" layout="flex" flex-direction="column">
+      <text class="window-title title" box-anchor="left"></text>
+      <rect class="hrule title" box-anchor="hfill" width="20" height="2"/>
+      <g class="body-container" box-anchor="fill" layout="flex" flex-direction="column">
+      </g>
+      <g class="button-container dialog-buttons" margin="5 4" box-anchor="hfill" layout="flex" flex-direction="row">
+      </g>
+    </g>
+  </svg>
+
+  <rect id="scroll-handle" class="scroll-handle" box-anchor="vfill" width="4" height="20" rx="2" ry="2"/>
+
+  <g id="colorbutton" class="color_preview previewbtn">
+    <pattern id="checkerboard" x="0" y="0" width="18" height="18"
+        patternUnits="userSpaceOnUse" patternContentUnits="userSpaceOnUse">
+      <rect fill="black" fill-opacity="0.1" x="0" y="0" width="9" height="9"/>
+      <rect fill="black" fill-opacity="0.1" x="9" y="9" width="9" height="9"/>
+    </pattern>
+
+    <rect fill="white" x="1" y="1" width="35" height="35" />
+    <rect fill="url(#checkerboard)" x="1" y="1" width="35" height="35" />
+    <rect class="btn-color" stroke="currentColor" stroke-width="2" fill="blue" x="1" y="1" width="35" height="35" />
+  </g>
+
+</svg>

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/millken/go/rgfw"
@@ -20,6 +21,7 @@ var icon = [4 * 3 * 3]uint8{
 }
 
 func main() {
+	runtime.LockOSThread()
 	rgfw.SetClassName("RGFW Example")
 	win := rgfw.CreateWindow("RGFW Example Window", rgfw.Rect{X: 500, Y: 500, W: 500, H: 500}, rgfw.WindowCenter|rgfw.WindowAllowDND)
 	rgfw.SetMouseNotify(func(win *rgfw.Window, point rgfw.Point, status bool) {
