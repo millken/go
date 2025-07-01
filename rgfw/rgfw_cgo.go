@@ -5,7 +5,8 @@ package rgfw
 
 /*
  #cgo CFLAGS:  -Wno-unused-function -Wno-implicit-function-declaration -I.
- #cgo linux LDFLAGS: -ldl -lpthread -lX11 -lXrandr -lGL
+ #cgo linux,amd64 LDFLAGS: -L${SRCDIR}/_libs/ -lRGFW_linux_amd64
+ #cgo linux LDFLAGS: -lXrandr -lX11 -ldl -lGL
  #cgo darwin,arm64 LDFLAGS: -mmacosx-version-min=11.0 -framework CoreVideo -framework Cocoa -framework OpenGL -framework IOKit -L${SRCDIR}/_libs/ -lRGFW_darwin_arm64
 
  #include <RGFW.h>

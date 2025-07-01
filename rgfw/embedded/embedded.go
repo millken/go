@@ -14,7 +14,7 @@ func Init() error {
 
 	dir := filepath.Join(os.TempDir(), "RGFW")
 	file := filepath.Join(dir, name)
-
+	println("Using RGFW_PATH:", dir)
 	if fi, err := os.Stat(file); err == nil {
 		if fi.Size() != int64(len(lib)) {
 			if err := os.Remove(file); err != nil {
