@@ -7,3 +7,6 @@
 [submodule "nanovg/nanovgXC"]
 	path = nanovg/nanovgXC
 	url = https://github.com/styluslabs/nanovgXC
+[submodule "plutovg/src"]
+	path = plutovg/src
+	url = https://github.com/sammycage/plutovg
