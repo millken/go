@@ -7,6 +7,7 @@ package main
 // 确保将静态库和头文件放在上面所示的 vendor 路径，或修改为你的实际路径。
 
 #include <stdlib.h>
+#include <string.h>
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
@@ -15,7 +16,7 @@ TTF_Font *globalFont = NULL;
 
 // 初始化字体
 int initFont(const char *fontPath, int fontSize) {
-	if (!TTF_Init()) {
+	if (TTF_Init() == -1) {
 		return -1;
 	}
     globalFont = TTF_OpenFont(fontPath, fontSize);
@@ -36,7 +37,7 @@ SDL_Texture* createTextTexture(SDL_Renderer *renderer, const char *text, SDL_Col
     if (!globalFont) return NULL;
 
 	// Use blended rendering so the surface has alpha and no solid background
-	SDL_Surface *surface = TTF_RenderText_Blended(globalFont, text, 0, fg);
+	SDL_Surface *surface = TTF_RenderText_Blended(globalFont, text, strlen(text), fg);
 	if (!surface) return NULL;
 
 	SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
