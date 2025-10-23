@@ -10,3 +10,9 @@
 [submodule "plutovg/src"]
 	path = plutovg/src
 	url = https://github.com/sammycage/plutovg
+[submodule "sdl3/SDL_ttf"]
+	path = sdl3/SDL_ttf
+	url = https://github.com/libsdl-org/SDL_ttf
+[submodule "sdl3/SDL"]
+	path = sdl3/SDL
+	url = https://github.com/libsdl-org/SDL
