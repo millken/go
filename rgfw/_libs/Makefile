@@ -34,7 +34,7 @@ windows_arm64.dll:
 
 linux_amd64.a:
 	cp ../RGFW/RGFW.h RGFW.c
-	gcc -c RGFW.c -D RGFW_IMPLEMENTATION -fPIC -D RGFW_EXPORT -std=c99 -o RGFW_linux_amd64.o 
+	gcc -c RGFW.c -D RGFW_IMPLEMENTATION -D RGFW_OPENGL -fPIC -D RGFW_EXPORT -std=c99 -o RGFW_linux_amd64.o 
 	rm RGFW.c
 	ar rcs libRGFW_linux_amd64.a RGFW_linux_amd64.o
 	rm RGFW_linux_amd64.o

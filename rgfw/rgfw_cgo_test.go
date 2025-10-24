@@ -13,5 +13,5 @@ func TestSetClassName(t *testing.T) {
 	if win == nil {
 		t.Fatal("Failed to create window")
 	}
-	win.MakeCurrent()
+	win.MakeCurrentOpenGL()
 }

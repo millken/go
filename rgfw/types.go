@@ -2,6 +2,8 @@ package rgfw
 
 import "unsafe"
 
+//go:generate stringer -linecomment -output=stringers.go -type=EventType,Format,Icon,WindowFlags
+
 type Point struct {
 	X int32
 	Y int32
@@ -18,81 +20,46 @@ type Area struct {
 	W uint32
 	H uint32
 }
-type cEvent struct {
-	Type uint8
-	// _           [3]byte // padding
-	Point   Point
-	Vector  Point
-	ScaleX  float32
-	ScaleY  float32
-	Key     uint8
-	KeyChar uint8
-	Repeat  uint8
-	KeyMod  uint8
-	Button  uint8
-	// _           [7]byte // padding to align double
-	Scroll      float64
-	Gamepad     uint16
-	AxisesCount uint8
-	WhichAxis   uint8
-	// _           [4]byte // padding to align next field (Axis) to 8 bytes
-
-	Axis [4]Point
-	// droppedFiles 和 _win 需要特殊处理
-	DroppedFiles      uintptr // char**
-	DroppedFilesCount uintptr // size_t
-	Win               uintptr // void*
-}
 type Event struct {
-	Type           EventType // which event has been sent?
-	Point          Point     // mouse x, y of event (or drop point)
-	Vector         Point     // raw mouse movement
-	ScaleX, ScaleY float32   // DPI scaling
-
-	Key     Key   // the physical key of the event
-	KeyChar uint8 // mapped key char of the event
-
-	Repeat bool // key press event repeated (the key is being held)
-	KeyMod KeyMod
-
-	Button uint8   // which mouse (or gamepad) button was pressed
-	Scroll float64 // the raw mouse scroll value
-
-	Gamepad     uint16 // which gamepad this event applies to (if applicable to any)
-	AxisesCount uint8  // number of axises
-
-	WhichAxis uint8    // which axis was effected
-	Axis      [4]Point // x, y of axises (-100 to 100)
-
-	// drag and drop data
-	DroppedFiles      []string // dropped files
-	DroppedFilesCount int      // how many files were dropped
-
-	Win interface{} // the window this event applies to (for event queue events)
+	Type         EventType // which event has been sent?
+	Common       CommonEvent
+	MouseButton  MouseButtonEvent
+	MouseScroll  MouseScrollEvent
+	MousePos     MousePosEvent
+	Key          KeyEvent
+	DataDrop     DataDropEvent
+	DataDrag     DataDragEvent
+	ScaleUpdated ScaleUpdatedEvent
+	// RGFW_commonEvent common; /*!< common event data (e.g.) type and win */
+	// RGFW_mouseButtonEvent button; /*!< data for a button press/release */
+	// RGFW_mouseScrollEvent scroll; /*!< data for a mouse scroll */
+	// RGFW_mousePosEvent mouse; /*!< data for mouse motion events */
+	// RGFW_keyEvent key; /*!< data for key press/release/hold events */
+	// RGFW_dataDropEvent drop; /*!< dropping a file events */
+	// RGFW_dataDragEvent drag; /* data for dragging a file events */
+	// RGFW_scaleUpdatedEvent scale; /* data for monitor scaling events */
 }
 
 type WindowFlags uint64
 
 const (
-	WindowNoInitAPI       WindowFlags = 1 << 0  // do NOT init an API (including the software rendering buffer)
-	WindowNoBorder        WindowFlags = 1 << 1  // the window doesn't have a border
-	WindowNoResize        WindowFlags = 1 << 2  // the window cannot be resized by the user
-	WindowAllowDND        WindowFlags = 1 << 3  // the window supports drag and drop
-	WindowHideMouse       WindowFlags = 1 << 4  // the window should hide the mouse
-	WindowFullscreen      WindowFlags = 1 << 5  // the window is fullscreen by default
-	WindowTransparent     WindowFlags = 1 << 6  // the window is transparent
-	WindowCenter          WindowFlags = 1 << 7  // center the window on the screen
-	WindowOpenglSoftware  WindowFlags = 1 << 8  // use OpenGL software rendering
-	WindowCocoaCHDirToRes WindowFlags = 1 << 9  // (cocoa only), change directory to resource folder
-	WindowScaleToMonitor  WindowFlags = 1 << 10 // scale the window to the screen
-	WindowHide            WindowFlags = 1 << 11 // the window is hidden
-	WindowMaximize        WindowFlags = 1 << 12
-	WindowCenterCursor    WindowFlags = 1 << 13
-	WindowFloating        WindowFlags = 1 << 14 // create a floating window
-	WindowFreeOnClose     WindowFlags = 1 << 15 // free the window struct when the window is closed
-	WindowFocusOnShow     WindowFlags = 1 << 16 // focus the window when it's shown
-	WindowMinimize        WindowFlags = 1 << 17 // minimize the window
-	WindowFocus           WindowFlags = 1 << 18 // if the window is in focus
+	WindowNoBorder       WindowFlags = 1 << 0 // the window doesn't have a border
+	WindowNoResize       WindowFlags = 1 << 1 // the window cannot be resized by the user
+	WindowAllowDND       WindowFlags = 1 << 2 // the window supports drag and drop
+	WindowHideMouse      WindowFlags = 1 << 3 // the window should hide the mouse
+	WindowFullscreen     WindowFlags = 1 << 4 // the window is fullscreen by default
+	WindowTransparent    WindowFlags = 1 << 5 // the window is transparent
+	WindowCenter         WindowFlags = 1 << 6 // center the window on the screen
+	WindowScaleToMonitor WindowFlags = 1 << 8 // scale the window to the screen
+	WindowHide           WindowFlags = 1 << 9 // the window is hidden
+	WindowMaximize       WindowFlags = 1 << 10
+	WindowCenterCursor   WindowFlags = 1 << 11
+	WindowFloating       WindowFlags = 1 << 12 // create a floating window
+	WindowFocusOnShow    WindowFlags = 1 << 13 // focus the window when it's shown
+	WindowMinimize       WindowFlags = 1 << 14 // minimize the window
+	WindowFocus          WindowFlags = 1 << 15 // if the window is in focus
+	WindowOpenGL         WindowFlags = 1 << 17 // create an OpenGL context
+	WindowEGL            WindowFlags = 1 << 18 // create an EGL context
 
 	WindowedFullscreen WindowFlags = WindowNoBorder | WindowMaximize
 )
@@ -118,130 +85,58 @@ const (
 // EventType represents the type of an event.
 type EventType uint8
 
-func (e EventType) String() string {
-	switch e {
-	case EventNone:
-		return "EventNone"
-	case EventKeyPressed:
-		return "EventKeyPressed"
-	case EventKeyReleased:
-		return "EventKeyReleased"
-	case EventMouseButtonPressed:
-		return "EventMouseButtonPressed"
-	case EventMouseButtonReleased:
-		return "EventMouseButtonReleased"
-	case EventMousePosChanged:
-		return "EventMousePosChanged"
-	case EventGamepadConnected:
-		return "EventGamepadConnected"
-	case EventGamepadDisconnected:
-		return "EventGamepadDisconnected"
-	case EventGamepadButtonPressed:
-		return "EventGamepadButtonPressed"
-	case EventGamepadButtonReleased:
-		return "EventGamepadButtonReleased"
-	case EventGamepadAxisMove:
-		return "EventGamepadAxisMove"
-	case EventWindowMoved:
-		return "EventWindowMoved"
-	case EventWindowResized:
-		return "EventWindowResized"
-	case EventFocusIn:
-		return "EventFocusIn"
-	case EventFocusOut:
-		return "EventFocusOut"
-	case EventMouseEnter:
-		return "EventMouseEnter"
-	case EventMouseLeave:
-		return "EventMouseLeave"
-	case EventWindowRefresh:
-		return "EventWindowRefresh"
-	case EventQuit:
-		return "EventQuit"
-	case EventDND:
-		return "EventDND"
-	case EventDNDInit:
-		return "EventDNDInit"
-	case EventWindowMaximized:
-		return "EventWindowMaximized"
-	case EventWindowMinimized:
-		return "EventWindowMinimized"
-	case EventWindowRestored:
-		return "EventWindowRestored"
-	default:
-	}
-	panic("unknown event type")
-}
-
 const (
 	EventNone EventType = iota // no event has been sent
 
-	// Key events
-	EventKeyPressed  // a key has been pressed
-	EventKeyReleased // a key has been released
-	/*
-	   key event note:
-	   - the code of the key pressed is stored in Event.key
-	   - string version is stored in Event.KeyString
-	   - Event.keyMod holds the current keyMod (CapsLock, NumLock, etc.)
+	EventKeyPressed  /* a key has been pressed */
+	EventKeyReleased /*!< a key has been released */
+	/*! key event note
+	the code of the key pressed is stored in
+	RGFW_event.key.value
+	!!Keycodes defined at the bottom of the RGFW_HEADER part of this file!!
+
+	while a string version is stored in
+	RGFW_event.key.valueString
+
+	RGFW_event.key.mod holds the current mod
+	this means if CapsLock, NumLock are active or not
 	*/
+	EventMouseButtonPressed  /*!< a mouse button has been pressed (left,middle,right) */
+	EventMouseButtonReleased /*!< a mouse button has been released (left,middle,right) */
+	EventMouseScroll         /*!< a mouse scroll event */
+	EventMousePosChanged     /*!< the position of the mouse has been changed */
+	/*! mouse event note
+	the x and y of the mouse can be found in the vector, RGFW_x, y
 
-	// Mouse events
-	EventMouseButtonPressed  // a mouse button has been pressed (left, middle, right)
-	EventMouseButtonReleased // a mouse button has been released (left, middle, right)
-	EventMousePosChanged     // the position of the mouse has been changed
-	/*
-	   mouse event note:
-	   - x and y of the mouse can be found in Event.point
-	   - Event.button holds which mouse button was pressed
+	RGFW_event.button.value holds which mouse button was pressed
 	*/
+	EventWindowMoved   /*!< the window was moved (by the user) */
+	EventWindowResized /*!< the window was resized (by the user), [on WASM this means the browser was resized] */
+	EventFocusIn       /*!< window is in focus now */
+	EventFocusOut      /*!< window is out of focus now */
+	EventMouseEnter    /* mouse entered the window */
+	EventMouseLeave    /* mouse left the window */
+	EventWindowRefresh /* The window content needs to be refreshed */
 
-	// Gamepad events
-	EventGamepadConnected      // a gamepad was connected
-	EventGamepadDisconnected   // a gamepad was disconnected
-	EventGamepadButtonPressed  // a gamepad button was pressed
-	EventGamepadButtonReleased // a gamepad button was released
-	EventGamepadAxisMove       // an axis of a gamepad was moved
-	/*
-	   gamepad event note:
-	   - Event.gamepad holds which gamepad was altered, if any
-	   - Event.button holds which gamepad button was pressed
-	   - Event.axis holds the data of all the axes
-	   - Event.axisesCount says how many axes there are
+	/* attribs change event note
+	The event data is sent straight to the window structure
+	with win->x, win->y, win->w and win->h
 	*/
+	EventQuit     /*!< the user clicked the quit button */
+	EventDataDrop /*!< a file has been dropped into the window */
+	EventDataDrag /*!< the start of a drag and drop event, when the file is being dragged */
+	/* drop data note
+	The x and y coords of the drop are stored in the vector RGFW_x, y
 
-	// Window events
-	EventWindowMoved   // the window was moved (by the user)
-	EventWindowResized // the window was resized (by the user), [on WASM this means the browser was resized]
-	EventFocusIn       // window is in focus now
-	EventFocusOut      // window is out of focus now
-	EventMouseEnter    // mouse entered the window
-	EventMouseLeave    // mouse left the window
-	EventWindowRefresh // The window content needs to be refreshed
+	RGFW_event.drop.count holds how many files were dropped
 
-	/*
-	   attribs change event note:
-	   - The event data is sent straight to the window structure
-	   - win.r.x, win.r.y, win.r.w and win.r.h
+	This is also the size of the array which stores all the dropped file string,
+	RGFW_event.drop.files
 	*/
-
-	EventQuit // the user clicked the quit button
-
-	// Drag and Drop events
-	EventDND     // a file has been dropped into the window
-	EventDNDInit // the start of a dnd event, when the place where the file drop is known
-	/*
-	   dnd data note:
-	   - x and y coords of the drop are stored in Event.point
-	   - Event.droppedFilesCount holds how many files were dropped
-	   - This is also the size of the array which stores all the dropped file strings, Event.droppedFiles
-	*/
-
-	// Window state events
-	EventWindowMaximized // the window was maximized
-	EventWindowMinimized // the window was minimized
-	EventWindowRestored  // the window was restored
-	EventScaleUpdated    // content scale factor changed
+	EventWindowMaximized /*!< the window was maximized */
+	EventWindowMinimized /*!< the window was minimized */
+	EventWindowRestored  /*!< the window was restored */
+	EventScaleUpdated    /*!< content scale factor changed */
 )
 
 type KeyMod uint8
@@ -373,6 +268,14 @@ const (
 	KeyLast = 256
 )
 
+type Icon uint8
+
+const (
+	IconTaskbar Icon = 1 << 0
+	IconWindow  Icon = 1 << 1
+	IconBoth         = IconTaskbar | IconWindow
+)
+
 func goString(c uintptr) string {
 	// We take the address and then dereference it to trick go vet from creating a possible misuse of unsafe.Pointer
 	ptr := *(*unsafe.Pointer)(unsafe.Pointer(&c))
@@ -387,4 +290,64 @@ func goString(c uintptr) string {
 		length++
 	}
 	return string(unsafe.Slice((*byte)(ptr), length))
+}
+
+// Converted from RGFW.h types (RGFW_event and related structs).
+// Prefix RGFW_ removed and C types mapped to Go equivalents.
+
+type CommonEvent struct {
+	Type EventType
+	Win  uintptr // RGFW_window* -> opaque pointer
+}
+
+type MouseButtonEvent struct {
+	Type  EventType
+	Win   uintptr
+	Value uint8
+}
+
+type MouseScrollEvent struct {
+	Type EventType
+	Win  uintptr
+	X    float32
+	Y    float32
+}
+
+type MousePosEvent struct {
+	Type EventType
+	Win  uintptr
+	X    int32
+	Y    int32
+	VecX float32
+	VecY float32
+}
+
+type KeyEvent struct {
+	Type   EventType
+	Win    uintptr
+	Value  Key
+	Sym    uint8
+	Repeat uint8 // RGFW_bool (u8)
+	Mod    KeyMod
+}
+
+type DataDropEvent struct {
+	Type  EventType
+	Win   uintptr
+	Files uintptr // char** (use uintptr to represent C array)
+	Count uintptr // size_t -> uintptr
+}
+
+type DataDragEvent struct {
+	Type EventType
+	Win  uintptr
+	X    int32
+	Y    int32
+}
+
+type ScaleUpdatedEvent struct {
+	Type EventType
+	Win  uintptr
+	X    float32
+	Y    float32
 }
