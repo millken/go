@@ -23,6 +23,8 @@ static inline i32 RGFW_event_mouse_x(const RGFW_event* e) { return e->mouse.x; }
 static inline i32 RGFW_event_mouse_y(const RGFW_event* e) { return e->mouse.y; }
 static inline float RGFW_event_mouse_vecX(const RGFW_event* e) { return e->mouse.vecX; }
 static inline float RGFW_event_mouse_vecY(const RGFW_event* e) { return e->mouse.vecY; }
+static inline i32 RGFW_event_drag_x(const RGFW_event* e) { return e->drag.x; }
+static inline i32 RGFW_event_drag_y(const RGFW_event* e) { return e->drag.y; }
 static inline float RGFW_event_scroll_x(const RGFW_event* e) { return e->scroll.x; }
 static inline float RGFW_event_scroll_y(const RGFW_event* e) { return e->scroll.y; }
 static inline size_t RGFW_event_drop_count(const RGFW_event* e) { return e->drop.count; }
@@ -30,9 +32,11 @@ static inline char** RGFW_event_drop_files(const RGFW_event* e) { return e->drop
 static inline float RGFW_event_scale_x(const RGFW_event* e) { return e->scale.x; }
 static inline float RGFW_event_scale_y(const RGFW_event* e) { return e->scale.y; }
 extern void goMouseCallback(RGFW_window* win, i32 x, i32 y, RGFW_bool status);
+
 */
 import "C"
 import (
+	"sync"
 	"unsafe"
 )
 
@@ -149,6 +153,89 @@ func (w *Window) MakeCurrentOpenGL() {
 	C.RGFW_window_makeCurrentWindow_OpenGL(w.ptr)
 }
 
+func (w *Window) SwapBuffersOpenGL() {
+	C.RGFW_window_swapBuffers_OpenGL(w.ptr)
+}
+
+// RGFWDEF void RGFW_window_swapInterval_OpenGL(RGFW_window* win, i32 swapInterval);
+func (w *Window) SwapIntervalOpenGL(interval int32) {
+	C.RGFW_window_swapInterval_OpenGL(w.ptr, C.i32(interval))
+}
+
+func (w *Window) CheckEvent(e *Event) bool {
+	if e == nil {
+		return false
+	}
+	var cev C.RGFW_event
+	ok := C.RGFW_window_checkEvent(w.ptr, &cev)
+	if ok == 0 {
+		return false
+	}
+	convertCEventToGoEvent(&cev, e)
+	return true
+	// set event type from the first byte of the C union
+	// e.Type = EventType(*(*uint8)(unsafe.Pointer(&cev)))
+
+	// // common win pointer via accessor (safe across unions)
+	// cw := C.RGFW_event_common_win(&cev)
+	// if cw != nil {
+	// 	e.Common.Win = uintptr(unsafe.Pointer(cw))
+	// } else {
+	// 	e.Common.Win = 0
+	// }
+
+	// switch e.Type {
+	// case EventKeyPressed, EventKeyReleased:
+	// 	e.Key.Value = Key(C.RGFW_event_key_value(&cev))
+	// 	e.Key.Sym = uint8(C.RGFW_event_key_sym(&cev))
+	// 	e.Key.Repeat = uint8(C.RGFW_event_key_repeat(&cev))
+	// 	e.Key.Mod = KeyMod(uint8(C.RGFW_event_key_mod(&cev)))
+	// 	e.Key.Win = uintptr(unsafe.Pointer(cw))
+	// case EventMouseButtonPressed, EventMouseButtonReleased:
+	// 	e.MouseButton.Value = uint8(C.RGFW_event_button_value(&cev))
+	// 	e.MouseButton.Win = uintptr(unsafe.Pointer(cw))
+	// case EventMousePosChanged:
+	// 	e.MousePos.X = int32(C.RGFW_event_mouse_x(&cev))
+	// 	e.MousePos.Y = int32(C.RGFW_event_mouse_y(&cev))
+	// 	e.MousePos.VecX = float32(C.RGFW_event_mouse_vecX(&cev))
+	// 	e.MousePos.VecY = float32(C.RGFW_event_mouse_vecY(&cev))
+	// 	e.MousePos.Win = uintptr(unsafe.Pointer(cw))
+	// case EventMouseScroll:
+	// 	e.MouseScroll.X = float32(C.RGFW_event_scroll_x(&cev))
+	// 	e.MouseScroll.Y = float32(C.RGFW_event_scroll_y(&cev))
+	// 	e.MouseScroll.Win = uintptr(unsafe.Pointer(cw))
+	// case EventDataDrop:
+	// 	e.DataDrop.Count = uintptr(C.RGFW_event_drop_count(&cev))
+	// 	filesPtr := C.RGFW_event_drop_files(&cev)
+	// 	if filesPtr != nil && C.RGFW_event_drop_count(&cev) > 0 {
+	// 		e.DataDrop.Files = uintptr(unsafe.Pointer(filesPtr))
+	// 	} else {
+	// 		e.DataDrop.Files = 0
+	// 	}
+	// 	e.DataDrop.Win = uintptr(unsafe.Pointer(cw))
+	// case EventDataDrag:
+	// 	e.DataDrag.X = int32(C.RGFW_event_mouse_x(&cev))
+	// 	e.DataDrag.Y = int32(C.RGFW_event_mouse_y(&cev))
+	// 	e.DataDrag.Win = uintptr(unsafe.Pointer(cw))
+	// case EventScaleUpdated:
+	// 	e.ScaleUpdated.X = float32(C.RGFW_event_scale_x(&cev))
+	// 	e.ScaleUpdated.Y = float32(C.RGFW_event_scale_y(&cev))
+	// 	e.ScaleUpdated.Win = uintptr(unsafe.Pointer(cw))
+	// default:
+	// 	// for other events, nothing else to map for now
+	// }
+	// return ok != 0
+}
+
+// RGFWDEF void RGFW_window_close(RGFW_window* win);
+func (w *Window) Close() {
+	if w == nil {
+		return
+	}
+
+	C.RGFW_window_close(w.ptr)
+}
+
 func (w *Window) ShouldClose() bool {
 	return C.RGFW_window_shouldClose(w.ptr) != 0
 }
@@ -176,18 +263,13 @@ func (w *Window) SetIcon(icon []uint8, width, height int32, format Format) bool 
 }
 
 // RGFWDEF RGFW_bool RGFW_isReleased(RGFW_window* win, RGFW_key key);
-func (w *Window) IsRelease(key Key) bool {
+func (w *Window) IsKeyRelease(key Key) bool {
 	return C.RGFW_window_isKeyReleased(w.ptr, C.RGFW_key(key)) != 0
 }
 
 // RGFWDEF RGFW_bool RGFW_window_setMouseDefault(RGFW_window* win);
 func (w *Window) SetMouseDefault() bool {
 	return C.RGFW_window_setMouseDefault(w.ptr) != 0
-}
-
-// RGFWDEF	RGFW_bool RGFW_window_setMouseStandard(RGFW_window* win, u8 mouse);
-func (w *Window) SetMouseStandard(mouse MouseIcon) bool {
-	return C.RGFW_window_setMouseStandard(w.ptr, C.u8(mouse)) != 0
 }
 
 // RGFWDEF void RGFW_window_setMouse(RGFW_window* win, RGFW_mouse* mouse);
@@ -206,80 +288,52 @@ func (w *Window) ShowMouse(show bool) {
 		C.RGFW_window_showMouse(w.ptr, 0)
 	}
 }
-func (w *Window) SwapBuffersOpenGL() {
-	C.RGFW_window_swapBuffers_OpenGL(w.ptr)
+
+// RGFWDEF RGFW_bool RGFW_window_setMouseStandard(RGFW_window* win, RGFW_mouseIcons mouse);
+func (w *Window) SetMouseStandard(mouse MouseIcon) bool {
+	return C.RGFW_window_setMouseStandard(w.ptr, C.RGFW_mouseIcons(mouse)) != 0
 }
 
-// RGFWDEF void RGFW_window_swapInterval_OpenGL(RGFW_window* win, i32 swapInterval);
-func (w *Window) SwapIntervalOpenGL(interval int32) {
-	C.RGFW_window_swapInterval_OpenGL(w.ptr, C.i32(interval))
+// 事件池
+var eventPool = sync.Pool{
+	New: func() interface{} {
+		return &Event{}
+	},
 }
 
-func (w *Window) CheckEvent(e *Event) bool {
-	if e == nil {
-		return false
-	}
+// 获取事件对象
+func GetEvent() *Event {
+	return eventPool.Get().(*Event)
+}
 
-	var cev C.RGFW_event
-	ok := C.RGFW_window_checkEvent(w.ptr, &cev)
+// 释放事件对象
+func ReleaseEvent(event *Event) {
+	// 重置事件
+	*event = Event{}
+	eventPool.Put(event)
+}
 
-	// common: set event type (cev.type uses the C field name `type` which is a Go keyword,
-	// so read the first byte of the C union directly)
-	e.Type = EventType(*(*uint8)(unsafe.Pointer(&cev)))
+func convertCEventToGoEvent(cEvent *C.RGFW_event, event *Event) {
+	cEventPtr := unsafe.Pointer(cEvent)
 
-	// map common win pointer using C accessor
-	cw := C.RGFW_event_common_win(&cev)
-	if cw != nil {
-		e.Common.Win = uintptr(unsafe.Pointer(cw))
-	} else {
-		e.Common.Win = 0
-	}
+	eventType := *(*C.RGFW_eventType)(unsafe.Pointer(cEvent))
+	event.Type = EventType(eventType)
 
-	switch e.Type {
+	switch event.Type {
 	case EventKeyPressed, EventKeyReleased:
-		e.Key.Value = Key(C.RGFW_event_key_value(&cev))
-		e.Key.Sym = uint8(C.RGFW_event_key_sym(&cev))
-		e.Key.Repeat = uint8(C.RGFW_event_key_repeat(&cev))
-		e.Key.Mod = KeyMod(uint8(C.RGFW_event_key_mod(&cev)))
-		e.Key.Win = uintptr(unsafe.Pointer(cw))
+		event.Key = *(*KeyEvent)(cEventPtr)
 	case EventMouseButtonPressed, EventMouseButtonReleased:
-		e.MouseButton.Value = uint8(C.RGFW_event_button_value(&cev))
-		e.MouseButton.Win = uintptr(unsafe.Pointer(cw))
+		event.MouseButton = *(*MouseButtonEvent)(cEventPtr)
 	case EventMousePosChanged:
-		e.MousePos.X = int32(C.RGFW_event_mouse_x(&cev))
-		e.MousePos.Y = int32(C.RGFW_event_mouse_y(&cev))
-		e.MousePos.VecX = float32(C.RGFW_event_mouse_vecX(&cev))
-		e.MousePos.VecY = float32(C.RGFW_event_mouse_vecY(&cev))
-		e.MousePos.Win = uintptr(unsafe.Pointer(cw))
+		event.MousePos = *(*MousePosEvent)(cEventPtr)
 	case EventMouseScroll:
-		e.MouseScroll.X = float32(C.RGFW_event_scroll_x(&cev))
-		e.MouseScroll.Y = float32(C.RGFW_event_scroll_y(&cev))
-		e.MouseScroll.Win = uintptr(unsafe.Pointer(cw))
-	case EventDataDrop, EventDataDrag:
-		// convert char** files to []string
-		e.DataDrop.Count = uintptr(C.RGFW_event_drop_count(&cev))
-		filesPtr := C.RGFW_event_drop_files(&cev)
-		if filesPtr != nil && C.RGFW_event_drop_count(&cev) > 0 {
-			e.DataDrop.Files = uintptr(unsafe.Pointer(filesPtr))
-		} else {
-			e.DataDrop.Files = 0
-		}
-		e.DataDrop.Win = uintptr(unsafe.Pointer(cw))
+		event.MouseScroll = *(*MouseScrollEvent)(cEventPtr)
+	case EventDataDrop:
+		event.DataDrop = *(*DataDropEvent)(cEventPtr)
+	case EventDataDrag:
+		event.DataDrag = *(*DataDragEvent)(cEventPtr)
 	case EventScaleUpdated:
-		e.ScaleUpdated.X = float32(C.RGFW_event_scale_x(&cev))
-		e.ScaleUpdated.Y = float32(C.RGFW_event_scale_y(&cev))
-		e.ScaleUpdated.Win = uintptr(unsafe.Pointer(cw))
-	default:
-		// for other events, nothing else to map for now
-	}
-	return ok != 0
-}
-
-// RGFWDEF void RGFW_window_close(RGFW_window* win);
-func (w *Window) Close() {
-	if w == nil {
-		return
+		event.ScaleUpdated = *(*ScaleUpdatedEvent)(cEventPtr)
 	}
 
-	C.RGFW_window_close(w.ptr)
 }

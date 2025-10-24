@@ -30,7 +30,7 @@ func main() {
 	fmt.Println("窗口图标和鼠标指针示例")
 	win.MakeCurrentOpenGL()
 	fmt.Println("设置窗口图标和鼠标指针")
-	win.SetIcon(icon[:], 3, 3, rgfw.FormatBGRA8)
+	win.SetIconEx(icon[:], 3, 3, rgfw.FormatBGRA8, rgfw.IconBoth)
 	win.SetMouseStandard(rgfw.MouseResizeNESW)
 	mouse := rgfw.LoadMouse(icon[:], 3, 3, rgfw.FormatBGRA8)
 	// 初始化 OpenGL 绑定
@@ -43,19 +43,26 @@ func main() {
 	fmt.Printf("OpenGL Vendor: %s\n", gl.GoStr(gl.GetString(gl.VENDOR)))
 	frames := uint32(0)
 	for !win.ShouldClose() {
-		// var event *rgfw.Event
-
-		if win.IsRelease(rgfw.KeyW) {
+		var event = rgfw.GetEvent()
+		for win.CheckEvent(event) {
+			switch event.Type {
+			case rgfw.EventQuit:
+				break
+			}
+			rgfw.ReleaseEvent(event)
+		}
+		// rgfw.PollEvents()
+		if win.IsKeyRelease(rgfw.KeyW) {
 			win.SetMouseDefault()
-		} else if win.IsRelease(rgfw.KeyE) {
+		} else if win.IsKeyRelease(rgfw.KeyE) {
 			win.SetMouse(mouse)
-		} else if win.IsRelease(rgfw.KeyQ) {
+		} else if win.IsKeyRelease(rgfw.KeyQ) {
 			win.ShowMouse(false)
-		} else if win.IsRelease(rgfw.KeyT) {
+		} else if win.IsKeyRelease(rgfw.KeyT) {
 			win.ShowMouse(true)
-		} else if win.IsRelease(rgfw.KeyDown) {
+		} else if win.IsKeyRelease(rgfw.KeyDown) {
 			rgfw.SetClipboard("DOWN 刺猬")
-		} else if win.IsRelease(rgfw.KeyUp) {
+		} else if win.IsKeyRelease(rgfw.KeyUp) {
 			text := rgfw.GetClipboard()
 			if text != "" {
 				fmt.Printf("pasted '%s'\n", text)

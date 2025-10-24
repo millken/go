@@ -27,3 +27,4 @@ _testmain.go
 .sonarlint
 .DS_Store
 cairo/cairo-1.18.4.tar.xz
+rgfw/examples/basic/basic

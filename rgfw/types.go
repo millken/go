@@ -324,7 +324,7 @@ type MousePosEvent struct {
 
 type KeyEvent struct {
 	Type   EventType
-	Win    uintptr
+	Win    *Window
 	Value  Key
 	Sym    uint8
 	Repeat uint8 // RGFW_bool (u8)
