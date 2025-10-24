@@ -131,7 +131,7 @@ func main() {
 	title := C.CString("透明窗口")
 	defer C.free(unsafe.Pointer(title))
 	// SDL3 SDL_CreateWindow(signature): (const char *title, int w, int h, SDL_WindowFlags flags)
-	window := C.SDL_CreateWindow(title, C.int(800), C.int(600), C.SDL_WINDOW_BORDERLESS)
+	window := C.SDL_CreateWindow(title, C.int(800), C.int(600), C.SDL_INIT_VIDEO)
 	if window == nil {
 		panic("窗口创建失败")
 	}
