@@ -92,9 +92,7 @@ clean_nanovg_macos:
 
 # 你可能还想为 Linux 和 Windows 添加类似的编译目标，使用对应的交叉编译器和标志。
 # 例如，使用 zig cc 进行交叉编译：
-# NANOVG_CFLAGS_LINUX = -fPIC -std=c99 -O2 -I$(NANOVG_SRC_DIR)
-# libnanovg_linux_amd64.a:
-#	...
-#	zig cc -target x86_64-linux-gnu $(NANOVG_CFLAGS_LINUX) -c $(NANOVG_IMPL_C) -o nanovg_linux_amd64.o
-#	ar rcs libnanovg_linux_amd64.a nanovg_linux_amd64.o
-#	...
+NANOVG_CFLAGS_LINUX = -fPIC -std=c99 -O2 -I$(NANOVG_SRC_DIR)
+libnanovg_linux_amd64.a:
+	gcc -c -MMD -Wall -Wshadow -Wno-unused-function -O2 -DNDEBUG  --std=c99 -Werror=implicit-function-declaration -Werror=int-conversion -I$(NANOVG_SRC_DIR) -Iexample -Iglad -isystemexample/stb -isystem/usr/include/SDL2 -c $(NANOVG_IMPL_C) -o nanovg_linux_amd64.o
+	ar rcs libnanovg_linux_amd64.a nanovg_linux_amd64.o
