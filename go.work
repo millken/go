@@ -8,4 +8,5 @@ use (
 	./sokol
 	./cairo
 	./sdl3
+	./c2go
 )
