@@ -25,7 +25,7 @@ func TestParseHeader_Functions(t *testing.T) {
 	if result == nil {
 		t.Fatal("ParseHeader returned nil result")
 	}
-
+	fmt.Printf("%+v", result)
 	t.Logf("Current ParseHeader returns empty results due to Clang visitor limitations")
 	t.Logf("Parsed %d functions (expected: 0)", len(result.Functions))
 
@@ -77,7 +77,7 @@ func TestParseHeader_Enums(t *testing.T) {
 	if result == nil {
 		t.Fatal("ParseHeader returned nil result")
 	}
-
+	fmt.Printf("%+v", result)
 	t.Logf("Current ParseHeader returns empty results due to Clang visitor limitations")
 	t.Logf("Parsed %d enums (expected: 0)", len(result.Enums))
 
